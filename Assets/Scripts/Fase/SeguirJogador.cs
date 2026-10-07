@@ -1,9 +1,9 @@
 using UnityEngine;
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>
-    /// Faz um objeto da cena (ex.: a luz 2D "Luz do Cabelo" da Fase 2) seguir o Curupira.
+    /// Faz um objeto da cena (ex.: a luz 2D "Luz do Craque" da Fase 2) seguir o jogador.
     /// </summary>
     public class SeguirJogador : MonoBehaviour
     {

@@ -6,7 +6,7 @@ using UnityEngine.UI;
 using UnityEngine.InputSystem.UI;
 #endif
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>
     /// Funções para montar a interface (Canvas, textos, imagens, botões e painéis)
@@ -158,6 +158,19 @@ namespace Curupira
                 nav.mode = Navigation.Mode.Explicit;
                 nav.selectOnUp = botoes[(i - 1 + botoes.Length) % botoes.Length];
                 nav.selectOnDown = botoes[(i + 1) % botoes.Length];
+                botoes[i].navigation = nav;
+            }
+        }
+
+        /// <summary>Liga a navegação por teclado/controle entre botões lado a lado.</summary>
+        public static void NavegacaoHorizontal(params Button[] botoes)
+        {
+            for (int i = 0; i < botoes.Length; i++)
+            {
+                var nav = new Navigation();
+                nav.mode = Navigation.Mode.Explicit;
+                nav.selectOnLeft = botoes[(i - 1 + botoes.Length) % botoes.Length];
+                nav.selectOnRight = botoes[(i + 1) % botoes.Length];
                 botoes[i].navigation = nav;
             }
         }

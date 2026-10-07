@@ -1,37 +1,30 @@
 using UnityEngine;
 
-namespace Curupira
+namespace RumoAoHexa
 {
-    public enum ResultadoJogo
-    {
-        Nenhum,
-        Vitoria,
-        Derrota,
-    }
-
     /// <summary>
-    /// Dados da partida que atravessam as cenas: pontos, vidas, sementes e
-    /// o resultado final. O recorde fica salvo no PlayerPrefs.
+    /// Dados da partida que atravessam as cenas (pontos, vidas, moedas, itens e
+    /// resultado). As regras ficam em <see cref="EstadoPartida"/>; aqui só se
+    /// guarda a instância e o recorde (no PlayerPrefs).
     /// </summary>
     public static class Sessao
     {
-        public const int VidasIniciais = 3;
-        public const int VidasMaximas = 5;
-        public const int TotalSementesDoJogo = 18; // 8 na fase 1 + 10 na fase 2
-        const string ChaveRecorde = "curupira_recorde";
+        const string ChaveRecorde = "rumoaohexa_recorde";
 
-        public static int Pontos;
-        public static int Vidas;
-        public static int SementesColetadas;
-        public static int FaseAtual;
-        public static ResultadoJogo Resultado;
-        public static bool NovoRecorde;
-        public static bool Iniciada;
+        static EstadoPartida estado;
 
-        // Valores guardados no começo da fase (usados em "Reiniciar fase").
-        static int pontosInicioFase;
-        static int vidasInicioFase;
-        static int sementesInicioFase;
+        /// <summary>O estado da partida (nunca é nulo).</summary>
+        public static EstadoPartida Estado
+        {
+            get
+            {
+                if (estado == null)
+                    estado = new EstadoPartida();
+                return estado;
+            }
+        }
+
+        public static bool Iniciada { get; private set; }
 
         /// <summary>
         /// O projeto usa "Enter Play Mode Options" sem recarregar o domínio, então
@@ -40,13 +33,46 @@ namespace Curupira
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ZerarEstaticos()
         {
+            estado = new EstadoPartida();
             Iniciada = false;
-            Pontos = 0;
-            Vidas = VidasIniciais;
-            SementesColetadas = 0;
-            FaseAtual = 0;
-            Resultado = ResultadoJogo.Nenhum;
-            NovoRecorde = false;
+        }
+
+        static EstadoPartida E
+        {
+            get { return Estado; }
+        }
+
+        public static int Pontos
+        {
+            get { return E.Pontos; }
+        }
+        public static int Vidas
+        {
+            get { return E.Vidas; }
+        }
+        public static int Moedas
+        {
+            get { return E.Moedas; }
+        }
+        public static int ItensColetados
+        {
+            get { return E.ItensColetados; }
+        }
+        public static int Expulsos
+        {
+            get { return E.Expulsos; }
+        }
+        public static int FaseAtual
+        {
+            get { return E.FaseAtual; }
+        }
+        public static ResultadoJogo Resultado
+        {
+            get { return E.Resultado; }
+        }
+        public static bool NovoRecorde
+        {
+            get { return E.NovoRecorde; }
         }
 
         public static int Recorde
@@ -56,13 +82,8 @@ namespace Curupira
 
         public static void NovoJogo()
         {
+            E.NovoJogo();
             Iniciada = true;
-            Pontos = 0;
-            Vidas = VidasIniciais;
-            SementesColetadas = 0;
-            FaseAtual = 1;
-            Resultado = ResultadoJogo.Nenhum;
-            NovoRecorde = false;
         }
 
         /// <summary>Permite dar Play direto em qualquer fase pelo Editor.</summary>
@@ -74,32 +95,20 @@ namespace Curupira
 
         public static void MarcarInicioFase(int fase)
         {
-            FaseAtual = fase;
-            pontosInicioFase = Pontos;
-            vidasInicioFase = Vidas;
-            sementesInicioFase = SementesColetadas;
+            E.MarcarInicioFase(fase);
         }
 
         public static void RestaurarInicioFase()
         {
-            Pontos = pontosInicioFase;
-            Vidas = Mathf.Max(1, vidasInicioFase);
-            SementesColetadas = sementesInicioFase;
-        }
-
-        public static void SomarPontos(int valor)
-        {
-            Pontos = Mathf.Max(0, Pontos + valor);
+            E.RestaurarInicioFase();
         }
 
         /// <summary>Encerra a partida e atualiza o recorde.</summary>
         public static void Finalizar(ResultadoJogo resultado)
         {
-            Resultado = resultado;
-            NovoRecorde = Pontos > Recorde;
-            if (NovoRecorde)
+            if (E.Finalizar(resultado, Recorde))
             {
-                PlayerPrefs.SetInt(ChaveRecorde, Pontos);
+                PlayerPrefs.SetInt(ChaveRecorde, E.Pontos);
                 PlayerPrefs.Save();
             }
         }

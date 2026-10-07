@@ -1,9 +1,9 @@
 using UnityEngine;
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>
-    /// Câmera que segue o Curupira com suavidade, olha um pouco à frente,
+    /// Câmera que segue o craque com suavidade, olha um pouco à frente,
     /// respeita os limites da fase e treme quando algo forte acontece.
     /// </summary>
     [DefaultExecutionOrder(50)]

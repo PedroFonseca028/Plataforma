@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: c81635655c68bbf45b5318a1deb8af61
+guid: 939c73a9395f3bbf8ccee4b22ba70c33
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -138,7 +138,7 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 77431281b8dab7e36d41d03cc584b7ea
+      spriteID: 6543977a6c5f26576ed1820ec030599b
       internalID: 3379852805212294361
       vertices: []
       indices: 
@@ -160,52 +160,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 7e81ddcc01921b48b9800ae0bdb99b42
+      spriteID: ffbea2271a1c623aa56203c6221d4425
       internalID: 4571014030657561069
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: ui_semente
-      rect:
-        serializedVersion: 2
-        x: 37
-        y: 47
-        width: 16
-        height: 16
-      alignment: 9
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 3d27934b8f53dee0362b6d315ea53249
-      internalID: 20491510576338489
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: ui_assobio
-      rect:
-        serializedVersion: 2
-        x: 55
-        y: 47
-        width: 16
-        height: 16
-      alignment: 9
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 31e990eadd10d4f0210769e1c28a6d00
-      internalID: 1145049020163227142
       vertices: []
       indices: 
       edges: []
@@ -214,7 +170,7 @@ TextureImporter:
       name: ui_botao
       rect:
         serializedVersion: 2
-        x: 73
+        x: 37
         y: 47
         width: 48
         height: 16
@@ -226,7 +182,7 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: fb757bc71bd6086a82e17a61389b2c57
+      spriteID: 7ffb168d7146e93bbf706f3fab8e909d
       internalID: 646381722751837616
       vertices: []
       indices: 
@@ -236,7 +192,7 @@ TextureImporter:
       name: ui_painel
       rect:
         serializedVersion: 2
-        x: 123
+        x: 87
         y: 15
         width: 48
         height: 48
@@ -248,7 +204,7 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 2ffd594c0fd0257f1c3465466ec9277b
+      spriteID: 6d125cdffa34be97ef532532803c99dd
       internalID: 1600807983490162688
       vertices: []
       indices: 
@@ -258,7 +214,7 @@ TextureImporter:
       name: ui_tecla
       rect:
         serializedVersion: 2
-        x: 173
+        x: 137
         y: 47
         width: 16
         height: 16
@@ -270,7 +226,7 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 8bb4603d19bd6770c8ec32af85a9c9db
+      spriteID: 366aed9b6378b4b13436e92874359026
       internalID: 3776176712934354524
       vertices: []
       indices: 
@@ -280,7 +236,7 @@ TextureImporter:
       name: ui_branco
       rect:
         serializedVersion: 2
-        x: 191
+        x: 155
         y: 59
         width: 4
         height: 4
@@ -292,7 +248,7 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 98bee684c70bcc7bd177fa14ba048138
+      spriteID: 6c39cca51682d810f72160829cdcd33c
       internalID: 4528573896072010942
       vertices: []
       indices: 
@@ -314,8 +270,6 @@ TextureImporter:
     nameFileIdTable:
       ui_coracao_cheio: 3379852805212294361
       ui_coracao_vazio: 4571014030657561069
-      ui_semente: 20491510576338489
-      ui_assobio: 1145049020163227142
       ui_botao: 646381722751837616
       ui_painel: 1600807983490162688
       ui_tecla: 3776176712934354524

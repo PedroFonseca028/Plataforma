@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>
     /// Anima um SpriteRenderer (ou uma Image de UI) trocando os quadros de uma
@@ -27,7 +27,7 @@ namespace Curupira
             get { return nomeAtual; }
         }
 
-        /// <summary>Toca uma animação pelo prefixo (ex.: "curupira_correr").</summary>
+        /// <summary>Toca uma animação pelo prefixo (ex.: "craque_correr").</summary>
         public void Tocar(string nome, float quadrosPorSegundo, bool repetirAnimacao = true, bool reiniciar = false)
         {
             if (!reiniciar && nome == nomeAtual)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Mini biblioteca de pixel art usada pelo gerador de arte do jogo
-"Curupira: Guardião da Mata".
+"Rumo ao Hexa".
 
 Tudo é desenhado "pixel a pixel" por código, para que a arte seja
 100% original do projeto.

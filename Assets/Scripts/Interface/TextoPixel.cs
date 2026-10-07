@@ -1,13 +1,13 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>
     /// Texto de interface desenhado com a <see cref="FontePixel"/>.
     /// Funciona como um componente de UI comum (herda de MaskableGraphic).
     /// </summary>
-    [AddComponentMenu("Curupira/Texto Pixel")]
+    [AddComponentMenu("Rumo ao Hexa/Texto Pixel")]
     public class TextoPixel : MaskableGraphic
     {
         [SerializeField, TextArea] string texto = "TEXTO";

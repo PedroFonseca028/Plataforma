@@ -273,7 +273,7 @@ MonoBehaviour:
   m_LightType: 4
   m_BlendStyleIndex: 0
   m_FalloffIntensity: 0.5
-  m_Color: {r: 1, g: 0.95, b: 0.88, a: 1}
+  m_Color: {r: 1, g: 0.97, b: 0.92, a: 1}
   m_Intensity: 1
   m_LightVolumeIntensity: 1
   m_LightVolumeIntensityEnabled: 0
@@ -396,9 +396,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   arquivoFase: Fase1
   numeroFase: 1
-  nomeFase: FASE 1 - A MATA AO ENTARDECER
+  nomeFase: FASE 1 - PELADA NA PRAIA
   tema: 0
   proximaCena: Fase2
   materialAceso: {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
   materialBrilho: {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
-  modeloLuzSemente: {fileID: 0}
+  modeloLuzItem: {fileID: 0}

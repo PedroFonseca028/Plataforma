@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>
     /// Troca de cena com "fade" (escurece, carrega a cena e clareia).
@@ -73,7 +73,7 @@ namespace Curupira
             }
             else
             {
-                Debug.LogError("[Curupira] Não foi possível carregar a cena '" + cena +
+                Debug.LogError("[RumoAoHexa] Não foi possível carregar a cena '" + cena +
                                "'. Confira se ela está em File > Build Profiles > Scene List.");
             }
             yield return null;

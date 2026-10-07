@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>
     /// Uma camada do fundo com efeito parallax. "fator" diz o quanto a camada

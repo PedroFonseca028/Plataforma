@@ -1,14 +1,13 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>
     /// Monta a fase inteira a partir de um mapa em texto (Resources/Fases/*.txt):
     /// Grid + Tilemaps (chão com Tilemap Collider 2D + Composite Collider 2D +
-    /// Rigidbody 2D Static), plataformas, perigos, inimigos, itens, fundo com
+    /// Rigidbody 2D Static), plataformas, perigos, argentinos, itens, fundo com
     /// parallax, câmera e HUD. Veja a legenda no começo de cada arquivo de fase.
     /// </summary>
     public class ConstrutorFase : MonoBehaviour
@@ -16,37 +15,36 @@ namespace Curupira
         [Header("Fase")]
         public string arquivoFase = "Fase1";
         public int numeroFase = 1;
-        public string nomeFase = "FASE 1 - A MATA AO ENTARDECER";
-        public Tema tema = Tema.Mata;
-        [Tooltip("Cena carregada ao coletar todas as sementes. Vazio = fim do jogo (vitória).")]
-        public string proximaCena = "Fase2";
+        public string nomeFase = Textos.Fase1Nome;
+        public Tema tema = Tema.Praia;
+        [Tooltip("Cena carregada ao pegar todos os itens. Vazio = fim do jogo (vitória).")]
+        public string proximaCena = Cenas.Fase2;
 
         [Header("Materiais do URP 2D")]
         public Material materialAceso;
         public Material materialBrilho;
 
-        [Header("Luzes 2D opcionais (modelos desativados na cena)")]
-        public GameObject modeloLuzSemente;
+        [Header("Luzes 2D opcionais (modelo desativado na cena)")]
+        public GameObject modeloLuzItem;
 
-        // dados do mapa
-        char[,] mapa;
-        int largura;
-        int altura;
-        string prefixoTema;
-
+        MapaFase mapa;
+        string prefixo;
         Tilemap tmChao;
         Tilemap tmDeco;
         Tilemap tmPlataformas;
-        readonly List<Coletavel> sementes = new List<Coletavel>();
-        readonly HashSet<Vector2Int> renascidos = new HashSet<Vector2Int>();
+        readonly List<Coletavel> itensObrigatorios = new List<Coletavel>();
 
+        public MapaFase Mapa
+        {
+            get { return mapa; }
+        }
         public int Largura
         {
-            get { return largura; }
+            get { return mapa != null ? mapa.Largura : 0; }
         }
         public int Altura
         {
-            get { return altura; }
+            get { return mapa != null ? mapa.Altura : 0; }
         }
 
         void Awake()
@@ -55,7 +53,7 @@ namespace Curupira
             Camadas.ConfigurarColisoes();
             Sessao.GarantirIniciada();
             Sessao.MarcarInicioFase(numeroFase);
-            prefixoTema = tema == Tema.Mata ? "mata" : "queimada";
+            prefixo = Temas.Prefixo(tema);
 
             if (!LerMapa())
                 return;
@@ -74,13 +72,14 @@ namespace Curupira
             if (seguir == null)
                 seguir = cam.gameObject.AddComponent<CameraSeguir>();
             seguir.alvo = jogador.transform;
-            seguir.limites = new Rect(0f, 0f, largura, altura + 4f);
+            seguir.limites = new Rect(0f, 0f, mapa.Largura, mapa.Altura + 4f);
             // posiciona a câmera antes de criar o fundo (o parallax usa a posição inicial)
             cam.transform.position = new Vector3(inicio.x, Mathf.Max(inicio.y + 1.6f, CameraSeguir.TamanhoOrtografico), -10f);
-            Fundo.Criar(tema, cam.transform);
+            Fundo.Criar(tema, cam.transform, 0f, true);
 
             var g = gameObject.AddComponent<GerenciadorFase>();
-            g.Iniciar(this, jogador, inicio, sementes, numeroFase, nomeFase, proximaCena, tema);
+            string objetivo = numeroFase == 1 ? Textos.Fase1Objetivo : Textos.Fase2Objetivo;
+            g.Iniciar(jogador, inicio, itensObrigatorios, numeroFase, nomeFase, objetivo, proximaCena, tema);
             grade.name = "Grid (fase " + numeroFase + ")";
         }
 
@@ -90,79 +89,24 @@ namespace Curupira
             TextAsset arquivo = Resources.Load<TextAsset>("Fases/" + arquivoFase);
             if (arquivo == null)
             {
-                Debug.LogError("[Curupira] Mapa não encontrado: Resources/Fases/" + arquivoFase + ".txt");
+                Debug.LogError("[RumoAoHexa] Mapa não encontrado: Resources/Fases/" + arquivoFase + ".txt");
                 return false;
             }
-            var linhas = new List<string>();
-            foreach (string bruta in arquivo.text.Split('\n'))
-            {
-                string l = bruta.TrimEnd('\r');
-                if (l.StartsWith("//"))
-                    continue; // comentários (legenda)
-                linhas.Add(l);
-            }
-            // remove linhas vazias no fim
-            while (linhas.Count > 0 && linhas[linhas.Count - 1].Trim().Length == 0)
-                linhas.RemoveAt(linhas.Count - 1);
-
-            altura = linhas.Count;
-            largura = 0;
-            foreach (string l in linhas)
-                largura = Mathf.Max(largura, l.Length);
-            mapa = new char[largura, altura];
-            for (int linha = 0; linha < altura; linha++)
-            {
-                int y = altura - 1 - linha; // a primeira linha do arquivo é o topo
-                for (int x = 0; x < largura; x++)
-                    mapa[x, y] = x < linhas[linha].Length ? linhas[linha][x] : '.';
-            }
-            return true;
+            mapa = MapaFase.Ler(arquivo.text);
+            foreach (string problema in mapa.Validar(Regras.ItensObrigatorios(numeroFase)))
+                Debug.LogWarning("[RumoAoHexa] " + arquivoFase + ": " + problema);
+            return mapa.Largura > 0;
         }
 
-        char Em(int x, int y)
+        string NomeChao(int x, int y)
         {
-            if (x < 0 || x >= largura || y < 0 || y >= altura)
-                return '.';
-            return mapa[x, y];
-        }
-
-        bool EhChao(int x, int y)
-        {
-            if (y < 0)
-                return true;           // abaixo do mapa: continua sendo terra
-            if (y >= altura)
-                return false;
-            if (x < 0 || x >= largura)
-                return true;           // bordas laterais: terra continua
-            return mapa[x, y] == '#';
-        }
-
-        int Mascara(int x, int y)
-        {
-            int m = 0;
-            if (EhChao(x, y + 1)) m |= 1;
-            if (EhChao(x + 1, y)) m |= 2;
-            if (EhChao(x, y - 1)) m |= 4;
-            if (EhChao(x - 1, y)) m |= 8;
-            return m;
-        }
-
-        static int Hash(int x, int y)
-        {
-            unchecked
-            {
-                int h = x * 73856093 ^ y * 19349663;
-                return (h ^ (h >> 13)) & 0x7fffffff;
-            }
-        }
-
-        string NomeTerra(string prefixo, int x, int y)
-        {
-            int m = Mascara(x, y);
-            string nome = prefixo + "_terra_" + m;
+            int m = mapa.Mascara(x, y);
+            // no estádio, o que fica acima do gramado é a arquibancada de concreto
+            string tipo = tema == Tema.Estadio && y >= 4 ? "_degrau_" : "_chao_";
+            string nome = prefixo + tipo + m;
             if (m == 15)
             {
-                int v = Hash(x, y) % 6;
+                int v = MapaFase.Hash(x, y) % 6;
                 if (v == 0) nome += "b";
                 else if (v == 1) nome += "c";
             }
@@ -199,39 +143,36 @@ namespace Curupira
 
             tmDeco = NovoTilemap(gridGo.transform, "Decoracao (Tilemap)", Ordem.Decoracao, 0, false);
             tmPlataformas = NovoTilemap(gridGo.transform, "Plataformas (Tilemap)", Ordem.Plataformas, Camadas.Plataforma, false);
-            Tilemap tmPerigos = NovoTilemap(gridGo.transform, "Espinhos (Tilemap)", Ordem.Perigos, Camadas.Perigo, tema == Tema.Queimada);
-            Tilemap tmLiquido = NovoTilemap(gridGo.transform, "Liquido (Tilemap)", Ordem.Liquido, 0, tema == Tema.Queimada);
+            Tilemap tmPerigos = NovoTilemap(gridGo.transform, "Perigos (Tilemap)", Ordem.Perigos, Camadas.Perigo, tema == Tema.Estadio);
+            Tilemap tmLiquido = NovoTilemap(gridGo.transform, "Liquido (Tilemap)", Ordem.Liquido, 0, false);
 
             var colisores = new GameObject("Colisores extras").transform;
             colisores.SetParent(gridGo.transform, false);
 
-            TileBase espinho = tema == Tema.Mata
-                ? Arte.Tile("mata_espinho_0", false)
-                : Arte.TileAnimado("queimada_espinho", 5f);
-            TileBase liquidoTopo = Arte.TileAnimado(prefixoTema + "_liquido_topo", 5f);
-            TileBase liquidoFundo = Arte.TileAnimado(prefixoTema + "_liquido_fundo", 3f);
+            TileBase perigo = Arte.TileAnimado(prefixo + "_espinho", tema == Tema.Praia ? 2f : 9f);
+            TileBase liquidoTopo = Arte.TileAnimado(prefixo + "_liquido_topo", 5f);
+            TileBase liquidoFundo = Arte.TileAnimado(prefixo + "_liquido_fundo", 3f);
 
-            for (int y = 0; y < altura; y++)
+            for (int y = 0; y < mapa.Altura; y++)
             {
-                for (int x = 0; x < largura; x++)
+                for (int x = 0; x < mapa.Largura; x++)
                 {
-                    char c = mapa[x, y];
                     var cel = new Vector3Int(x, y, 0);
-                    switch (c)
+                    switch (mapa.Em(x, y))
                     {
-                        case '#':
-                            tmChao.SetTile(cel, Arte.Tile(NomeTerra(prefixoTema, x, y), true));
+                        case Legenda.Chao:
+                            tmChao.SetTile(cel, Arte.Tile(NomeChao(x, y), true));
                             break;
-                        case '=':
-                            tmPlataformas.SetTile(cel, Arte.Tile(prefixoTema + "_plataforma_" + TipoPlataforma(x, y), false));
+                        case Legenda.Plataforma:
+                            tmPlataformas.SetTile(cel, Arte.Tile(prefixo + "_plataforma_" + mapa.TipoPlataforma(x, y), false));
                             break;
-                        case '^':
-                            tmPerigos.SetTile(cel, espinho);
+                        case Legenda.Espinho:
+                            tmPerigos.SetTile(cel, perigo);
                             break;
-                        case '~':
+                        case Legenda.LiquidoTopo:
                             tmLiquido.SetTile(cel, liquidoTopo);
                             break;
-                        case '%':
+                        case Legenda.LiquidoFundo:
                             tmLiquido.SetTile(cel, liquidoFundo);
                             break;
                     }
@@ -239,25 +180,25 @@ namespace Curupira
             }
 
             // colisores juntando células vizinhas iguais (uma caixa por trecho)
-            for (int y = 0; y < altura; y++)
+            for (int y = 0; y < mapa.Altura; y++)
             {
                 int x = 0;
-                while (x < largura)
+                while (x < mapa.Largura)
                 {
-                    char c = mapa[x, y];
-                    if (c != '=' && c != '^' && c != '~')
+                    char c = mapa.Em(x, y);
+                    if (c != Legenda.Plataforma && c != Legenda.Espinho && c != Legenda.LiquidoTopo)
                     {
                         x++;
                         continue;
                     }
                     int ini = x;
-                    while (x < largura && mapa[x, y] == c)
+                    while (x < mapa.Largura && mapa.Em(x, y) == c)
                         x++;
                     int n = x - ini;
-                    if (c == '=')
+                    if (c == Legenda.Plataforma)
                         ColisorPlataforma(colisores, ini, y, n);
-                    else if (c == '^')
-                        ColisorEspinho(colisores, ini, y, n);
+                    else if (c == Legenda.Espinho)
+                        ColisorPerigo(colisores, ini, y, n);
                     else
                         ColisorLiquido(colisores, ini, y, n);
                 }
@@ -265,20 +206,10 @@ namespace Curupira
 
             // paredes invisíveis nas laterais
             Parede(colisores, -0.5f);
-            Parede(colisores, largura + 0.5f);
+            Parede(colisores, mapa.Largura + 0.5f);
 
             DecorarAutomaticamente();
             return gridGo.transform;
-        }
-
-        string TipoPlataforma(int x, int y)
-        {
-            bool esq = Em(x - 1, y) == '=';
-            bool dir = Em(x + 1, y) == '=';
-            if (esq && dir) return "m";
-            if (dir) return "e";
-            if (esq) return "d";
-            return "u";
         }
 
         void ColisorPlataforma(Transform pai, int x, int y, int n)
@@ -296,9 +227,9 @@ namespace Curupira
             ef.surfaceArc = 160f;
         }
 
-        void ColisorEspinho(Transform pai, int x, int y, int n)
+        void ColisorPerigo(Transform pai, int x, int y, int n)
         {
-            var go = new GameObject("Espinhos");
+            var go = new GameObject(tema == Tema.Praia ? "Ouricos" : "Sinalizadores");
             go.layer = Camadas.Perigo;
             go.transform.SetParent(pai, false);
             go.transform.position = new Vector3(x + n * 0.5f, y, 0f);
@@ -309,7 +240,7 @@ namespace Curupira
 
         void ColisorLiquido(Transform pai, int x, int y, int n)
         {
-            var go = new GameObject(tema == Tema.Mata ? "Rio" : "Brasas");
+            var go = new GameObject(tema == Tema.Praia ? "Mar" : "Fosso");
             go.layer = Camadas.Perigo;
             go.transform.SetParent(pai, false);
             go.transform.position = new Vector3(x + n * 0.5f, y, 0f);
@@ -317,7 +248,7 @@ namespace Curupira
             col.isTrigger = true;
             col.size = new Vector2(n, 0.6f);
             col.offset = new Vector2(0f, 0.3f);
-            go.AddComponent<ZonaLiquida>().brasas = tema == Tema.Queimada;
+            go.AddComponent<ZonaLiquida>();
         }
 
         void Parede(Transform pai, float x)
@@ -325,44 +256,60 @@ namespace Curupira
             var go = new GameObject("Parede invisivel");
             go.layer = Camadas.Chao;
             go.transform.SetParent(pai, false);
-            go.transform.position = new Vector3(x, altura * 0.5f + 5f, 0f);
-            go.AddComponent<BoxCollider2D>().size = new Vector2(1f, altura + 20f);
+            go.transform.position = new Vector3(x, mapa.Altura * 0.5f + 5f, 0f);
+            go.AddComponent<BoxCollider2D>().size = new Vector2(1f, mapa.Altura + 20f);
         }
 
-        static readonly string[] DecoMata =
+        public static readonly string[] DecoPraia =
         {
-            "mata_deco_tufo_0", "mata_deco_tufo_1", "mata_deco_tufo_2", "mata_deco_flor_0", "mata_deco_flor_1",
-            "mata_deco_flor_2", "mata_deco_bromelia", "mata_deco_samambaia", "mata_deco_cogumelo", "mata_deco_pedra",
+            "praia_deco_concha", "praia_deco_estrelamar", "praia_deco_balde", "praia_deco_chinelo",
+            "praia_deco_coco", "praia_deco_capim", "praia_deco_capim", "praia_deco_pedra",
         };
 
-        static readonly string[] DecoQueimada =
+        public static readonly string[] DecoEstadio =
         {
-            "queimada_deco_capim_0", "queimada_deco_capim_1", "queimada_deco_cinzas", "queimada_deco_toco",
-            "queimada_deco_galho", "queimada_deco_pedra",
+            "estadio_deco_tufoa", "estadio_deco_tufob", "estadio_deco_tufoa", "estadio_deco_cone",
+            "estadio_deco_garrafa", "estadio_deco_copo", "estadio_deco_papel",
         };
-
-        static readonly string[] Flores = { "mata_deco_flor_0", "mata_deco_flor_1", "mata_deco_flor_2", "mata_deco_bromelia" };
 
         void DecorarAutomaticamente()
         {
-            string[] lista = tema == Tema.Mata ? DecoMata : DecoQueimada;
-            for (int y = 0; y < altura - 1; y++)
+            string[] lista = tema == Tema.Praia ? DecoPraia : DecoEstadio;
+            for (int y = 0; y < mapa.Altura - 1; y++)
             {
-                for (int x = 0; x < largura; x++)
+                for (int x = 0; x < mapa.Largura; x++)
                 {
-                    if (mapa[x, y] != '#' || mapa[x, y + 1] != '.')
+                    if (mapa.Em(x, y) != Legenda.Chao || mapa.Em(x, y + 1) != Legenda.Vazio)
                         continue;
-                    int h = Hash(x + 7, y * 3 + numeroFase);
-                    if (h % 100 < 38)
+                    // a arquibancada já tem as cadeiras: decoração só no gramado
+                    if (tema == Tema.Estadio && y >= 4)
+                        continue;
+                    int h = MapaFase.Hash(x + 7, y * 3 + numeroFase);
+                    if (h % 100 < 30)
                         tmDeco.SetTile(new Vector3Int(x, y + 1, 0), Arte.Tile(lista[(h / 100) % lista.Length], false));
                 }
             }
         }
 
         // ------------------------------------------------------------ entidades
+        /// <summary>Sprite da decoração grande de cada letra do mapa (T Y B b a).</summary>
+        public static string DecoracaoGrande(Tema tema, char c)
+        {
+            bool praia = tema == Tema.Praia;
+            switch (c)
+            {
+                case 'T': return praia ? "praia_coqueiro" : "estadio_trave";
+                case 'Y': return praia ? "praia_guarda_sol" : "estadio_placa";
+                case 'B': return praia ? "praia_trave" : "estadio_banco";
+                case 'b': return praia ? "praia_quiosque" : "estadio_camera";
+                case 'a': return praia ? "praia_castelo" : "estadio_sacola";
+            }
+            return null;
+        }
+
         Vector3 CriarEntidades()
         {
-            Vector3 inicio = new Vector3(2.5f, altura * 0.5f, 0f);
+            Vector3 inicio = new Vector3(2.5f, mapa.Altura * 0.5f, 0f);
             var pais = new Dictionary<string, Transform>();
             System.Func<string, Transform> pai = nome =>
             {
@@ -375,64 +322,59 @@ namespace Curupira
                 return t;
             };
 
-            for (int y = 0; y < altura; y++)
+            // itens obrigatórios: o ano/letra segue a ordem da esquerda para a direita
+            List<Celula> ordem = mapa.ItensObrigatoriosEmOrdem();
+            for (int i = 0; i < ordem.Count; i++)
             {
-                for (int x = 0; x < largura; x++)
+                Celula c = ordem[i];
+                string rotulo = Regras.RotuloItem(numeroFase, i);
+                string anim = numeroFase == 1 ? "estrela" : "letra_" + rotulo.ToLowerInvariant();
+                Coletavel item = Coletavel.Criar(TipoColetavel.ItemObrigatorio, new Vector3(c.X + 0.5f, c.Y + 0.5f, 0f), i,
+                    rotulo, anim, modeloLuzItem);
+                item.transform.SetParent(pai(numeroFase == 1 ? "Estrelas" : "Letras"), true);
+                itensObrigatorios.Add(item);
+            }
+
+            for (int y = 0; y < mapa.Altura; y++)
+            {
+                for (int x = 0; x < mapa.Largura; x++)
                 {
-                    char c = mapa[x, y];
+                    char c = mapa.Em(x, y);
                     Vector3 pe = new Vector3(x + 0.5f, y, 0f);
                     Vector3 centro = new Vector3(x + 0.5f, y + 0.5f, 0f);
                     switch (c)
                     {
-                        case 'P':
+                        case Legenda.Inicio:
                             inicio = pe;
                             break;
-                        case 'K':
-                            Totem.Criar(pe).transform.SetParent(pai("Totens"), true);
+                        case Legenda.Bandeirinha:
+                            Bandeirinha.Criar(pe).transform.SetParent(pai("Bandeirinhas"), true);
                             break;
-                        case '*':
-                            Coletavel s = Coletavel.Criar(TipoColetavel.Semente, centro, modeloLuzSemente);
-                            s.transform.SetParent(pai("Sementes"), true);
-                            sementes.Add(s);
+                        case Legenda.Moeda:
+                            Coletavel.Criar(TipoColetavel.Moeda, centro, 0, null, null, null).transform.SetParent(pai("Moedas"), true);
                             break;
-                        case 'o':
-                            Coletavel.Criar(TipoColetavel.Acai, centro, null).transform.SetParent(pai("Frutas"), true);
+                        case Legenda.Coracao:
+                            Coletavel.Criar(TipoColetavel.Coracao, centro, 0, null, null, null).transform.SetParent(pai("Coracoes"), true);
                             break;
-                        case 'c':
-                            Coletavel.Criar(TipoColetavel.Caju, centro, null).transform.SetParent(pai("Frutas"), true);
+                        case Legenda.Zagueiro:
+                            Inimigo.Criar<Zagueiro>(pe).transform.SetParent(pai("Argentinos"), true);
                             break;
-                        case 'g':
-                            Coletavel.Criar(TipoColetavel.Guarana, centro, null).transform.SetParent(pai("Frutas"), true);
+                        case Legenda.Lateral:
+                            Inimigo.Criar<Lateral>(pe).transform.SetParent(pai("Argentinos"), true);
                             break;
-                        case 'h':
-                            Coletavel.Criar(TipoColetavel.Coracao, centro, null).transform.SetParent(pai("Frutas"), true);
+                        case Legenda.Cabeceador:
+                            Inimigo.Criar<Cabeceador>(pe).transform.SetParent(pai("Argentinos"), true);
                             break;
-                        case 's':
-                            Inimigo.Criar<SerraSerra>(pe).transform.SetParent(pai("Inimigos"), true);
-                            break;
-                        case 'd':
-                            Inimigo.Criar<Drone>(centro).transform.SetParent(pai("Inimigos"), true);
-                            break;
-                        case 'f':
-                            Inimigo.Criar<Fagulha>(pe).transform.SetParent(pai("Inimigos"), true);
-                            break;
-                        case 'M':
+                        case Legenda.PlataformaMovel:
                             CriarPlataformaMovel(x, y).transform.SetParent(pai("Plataformas moveis"), true);
                             break;
-                        case 'T':
-                            Arvore(tema == Tema.Mata ? "arvore_ipe" : "arvore_queimada_0", pe, pai("Arvores"));
-                            break;
-                        case 'Y':
-                            Arvore(tema == Tema.Mata ? "arvore_copa" : "arvore_queimada_1", pe, pai("Arvores"));
-                            break;
-                        case 'B':
-                            Arvore(tema == Tema.Mata ? "arvore_palmeira" : "toco_grande", pe, pai("Arvores"));
-                            break;
-                        case 'b':
-                            Arvore(tema == Tema.Mata ? "arvore_bananeira" : "toco_grande", pe, pai("Arvores"));
-                            break;
-                        case 'a':
-                            Arvore(tema == Tema.Mata ? "arbusto" : "toco_grande", pe, pai("Arvores"));
+                        default:
+                            string deco = DecoracaoGrande(tema, c);
+                            if (deco != null)
+                            {
+                                SpriteRenderer sr = Efeitos.NovoSprite(deco, pai("Decoracao"), Arte.Sprite(deco), Ordem.DecoracaoGrande);
+                                sr.transform.position = pe;
+                            }
                             break;
                     }
                 }
@@ -440,97 +382,15 @@ namespace Curupira
             return inicio;
         }
 
-        void Arvore(string sprite, Vector3 pe, Transform pai)
-        {
-            SpriteRenderer sr = Efeitos.NovoSprite(sprite, pai, Arte.Sprite(sprite), Ordem.ArvoresGrandes);
-            sr.transform.position = pe;
-        }
-
         PlataformaMovel CriarPlataformaMovel(int x, int y)
         {
-            int esq = x;
-            int dir = x;
-            for (int i = x - 1; i >= Mathf.Max(0, x - 30); i--)
-                if (mapa[i, y] == '<') { esq = i; break; }
-            for (int i = x + 1; i < Mathf.Min(largura, x + 30); i++)
-                if (mapa[i, y] == '>') { dir = i; break; }
+            int esq, dir;
+            mapa.LimitesPlataformaMovel(x, y, out esq, out dir);
             Vector2 a = new Vector2(esq + 1.5f, y + 0.5f);
             Vector2 b = new Vector2(dir - 0.5f, y + 0.5f);
-            PlataformaMovel p = PlataformaMovel.Criar(new Vector2(x + 1.5f, y + 0.5f), b, 3, prefixoTema);
+            PlataformaMovel p = PlataformaMovel.Criar(new Vector2(x + 1.5f, y + 0.5f), b, 3, prefixo);
             p.pontoA = a;
             return p;
-        }
-
-        // ------------------------------------------------------------ a mata renasce
-        /// <summary>
-        /// Na fase queimada, o chão em volta da semente recuperada volta a ficar verde
-        /// (em ondas). Na mata, nascem flores. Retorna a rotina para ser iniciada.
-        /// </summary>
-        public IEnumerator Renascer(Vector2 centro, float raio)
-        {
-            int cx = Mathf.FloorToInt(centro.x);
-            int cy = Mathf.FloorToInt(centro.y);
-            int r = Mathf.CeilToInt(raio);
-            for (int anel = 0; anel <= r; anel++)
-            {
-                for (int y = cy - anel; y <= cy + anel; y++)
-                {
-                    for (int x = cx - anel; x <= cx + anel; x++)
-                    {
-                        if (Mathf.Max(Mathf.Abs(x - cx), Mathf.Abs(y - cy)) != anel)
-                            continue;
-                        if ((x - centro.x) * (x - centro.x) + (y - centro.y) * (y - centro.y) > raio * raio)
-                            continue;
-                        RenascerCelula(x, y);
-                    }
-                }
-                yield return new WaitForSeconds(0.05f);
-            }
-        }
-
-        void RenascerCelula(int x, int y)
-        {
-            if (x < 0 || x >= largura || y < 0 || y >= altura)
-                return;
-            var pos = new Vector2Int(x, y);
-            char c = mapa[x, y];
-            if (tema == Tema.Queimada && !renascidos.Contains(pos))
-            {
-                if (c == '#')
-                {
-                    renascidos.Add(pos);
-                    tmChao.SetTile(new Vector3Int(x, y, 0), Arte.Tile(NomeTerra("mata", x, y), true));
-                }
-                else if (c == '=')
-                {
-                    renascidos.Add(pos);
-                    tmPlataformas.SetTile(new Vector3Int(x, y, 0), Arte.Tile("mata_plataforma_" + TipoPlataforma(x, y), false));
-                }
-            }
-            // flores sobre o chão
-            if (c == '#' && Em(x, y + 1) == '.')
-            {
-                int h = Hash(x, y + 99);
-                var acima = new Vector3Int(x, y + 1, 0);
-                if (tema == Tema.Queimada || h % 3 == 0)
-                {
-                    string nome = h % 2 == 0 ? Flores[(h / 2) % Flores.Length] : DecoMata[(h / 7) % DecoMata.Length];
-                    tmDeco.SetTile(acima, Arte.Tile(nome, false));
-                    if (h % 4 == 0)
-                        Efeitos.Animacao("brilho", new Vector3(x + 0.5f, y + 1.4f, 0f), 12f, 1f, true);
-                }
-            }
-        }
-
-        /// <summary>Faz a fase toda renascer (final da fase 2).</summary>
-        public IEnumerator RenascerTudo(Vector2 centro)
-        {
-            float raio = Mathf.Max(largura, altura) + 2f;
-            for (float r = 2f; r < raio; r += 3f)
-            {
-                StartCoroutine(Renascer(centro, r));
-                yield return new WaitForSeconds(0.12f);
-            }
         }
 
 #if UNITY_EDITOR
@@ -542,33 +402,23 @@ namespace Curupira
             TextAsset arquivo = Resources.Load<TextAsset>("Fases/" + arquivoFase);
             if (arquivo == null)
                 return;
-            var linhas = new List<string>();
-            foreach (string bruta in arquivo.text.Split('\n'))
+            MapaFase m = MapaFase.Ler(arquivo.text);
+            for (int y = 0; y < m.Altura; y++)
             {
-                string l = bruta.TrimEnd('\r');
-                if (!l.StartsWith("//"))
-                    linhas.Add(l);
-            }
-            while (linhas.Count > 0 && linhas[linhas.Count - 1].Trim().Length == 0)
-                linhas.RemoveAt(linhas.Count - 1);
-            int h = linhas.Count;
-            for (int li = 0; li < h; li++)
-            {
-                int y = h - 1 - li;
-                for (int x = 0; x < linhas[li].Length; x++)
+                for (int x = 0; x < m.Largura; x++)
                 {
-                    char c = linhas[li][x];
+                    char c = m.Em(x, y);
                     Color cor;
                     switch (c)
                     {
-                        case '#': cor = tema == Tema.Mata ? new Color(0.45f, 0.3f, 0.2f, 0.8f) : new Color(0.3f, 0.25f, 0.25f, 0.8f); break;
-                        case '=': cor = new Color(0.8f, 0.6f, 0.3f, 0.8f); break;
+                        case '#': cor = tema == Tema.Praia ? new Color(0.95f, 0.8f, 0.5f, 0.8f) : new Color(0.3f, 0.6f, 0.3f, 0.8f); break;
+                        case '=': cor = new Color(0.9f, 0.9f, 0.9f, 0.8f); break;
                         case '^': cor = new Color(1f, 0.2f, 0.2f, 0.8f); break;
                         case '~': case '%': cor = new Color(0.2f, 0.5f, 1f, 0.6f); break;
                         case '*': cor = new Color(1f, 0.9f, 0.2f, 1f); break;
-                        case 's': case 'd': case 'f': cor = new Color(1f, 0.4f, 0f, 1f); break;
+                        case 'z': case 'r': case 'c': cor = new Color(0.4f, 0.75f, 0.95f, 1f); break;
                         case 'P': cor = new Color(0.2f, 1f, 0.3f, 1f); break;
-                        case 'K': cor = new Color(0.9f, 0.5f, 1f, 1f); break;
+                        case 'K': cor = new Color(0.1f, 0.6f, 0.3f, 1f); break;
                         default: continue;
                     }
                     Gizmos.color = cor;

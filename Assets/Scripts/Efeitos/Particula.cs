@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>Movimento simples de uma partícula.</summary>
     public class Particula : MonoBehaviour

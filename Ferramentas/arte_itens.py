@@ -1,145 +1,172 @@
 # -*- coding: utf-8 -*-
 """
-Itens colecionáveis, checkpoints, efeitos visuais e ícones de interface.
+Itens, bola, bandeirinha, placar, efeitos visuais e ícones de interface
+do jogo "Rumo ao Hexa".
 """
 import math
 from pixelart import Canvas, cor, misturar, com_alpha
 
-K = cor('#2a1a22')
+K = cor('#1e1622')
 BRANCO = cor('#ffffff')
 OURO = [cor('#fff7c2'), cor('#ffe066'), cor('#f5b62a'), cor('#c77a16'), cor('#7a4410')]
-VERDE = cor('#58bd48')
-VERDE_S = cor('#2e7a3a')
-VERDE_H = cor('#a6e66c')
-MARROM = cor('#8a5a3c')
-MARROM_S = cor('#5a3826')
+VERDE = cor('#1f9d48')
+VERDE_S = cor('#13703a')
+VERDE_H = cor('#5fd47e')
+AMARELO = cor('#ffd21f')
+AZUL = cor('#2557c9')
+AZUL_S = cor('#173a8f')
+CELESTE = cor('#62b8ec')
+
+# ------------------------------------------------------------ micro fonte (3x5) para placas e placar
+MICRO = {
+    'A': ["###", "#.#", "###", "#.#", "#.#"], 'B': ["##.", "#.#", "##.", "#.#", "##."],
+    'C': ["###", "#..", "#..", "#..", "###"], 'D': ["##.", "#.#", "#.#", "#.#", "##."],
+    'E': ["###", "#..", "##.", "#..", "###"], 'F': ["###", "#..", "##.", "#..", "#.."],
+    'G': ["###", "#..", "#.#", "#.#", "###"], 'H': ["#.#", "#.#", "###", "#.#", "#.#"],
+    'I': ["###", ".#.", ".#.", ".#.", "###"], 'L': ["#..", "#..", "#..", "#..", "###"],
+    'M': ["#.#", "###", "###", "#.#", "#.#"], 'N': ["##.", "#.#", "#.#", "#.#", "#.#"],
+    'O': ["###", "#.#", "#.#", "#.#", "###"], 'P': ["###", "#.#", "###", "#..", "#.."],
+    'Q': ["###", "#.#", "#.#", "##.", ".##"],
+    'R': ["##.", "#.#", "##.", "#.#", "#.#"], 'S': ["###", "#..", "###", "..#", "###"],
+    'T': ["###", ".#.", ".#.", ".#.", ".#."], 'U': ["#.#", "#.#", "#.#", "#.#", "###"],
+    'V': ["#.#", "#.#", "#.#", "#.#", ".#."], 'X': ["#.#", "#.#", ".#.", "#.#", "#.#"],
+    '!': [".#.", ".#.", ".#.", "...", ".#."], ' ': ["...", "...", "...", "...", "..."],
+    '6': ["###", "#..", "###", "#.#", "###"], '0': ["###", "#.#", "#.#", "#.#", "###"],
+}
 
 
-# ------------------------------------------------------------ semente
-def semente(fase):
-    """Semente Encantada: dourada, com um brotinho e um brilho que percorre."""
+def micro_texto(c, x, y, texto, cc):
+    """Escreve com a micro fonte 3x5 (1 px de espaço). Devolve a largura."""
+    faltando = [ch for ch in texto if ch not in MICRO]
+    if faltando:
+        raise ValueError("micro fonte sem as letras %r (texto %r)" % (faltando, texto))
+    x0 = x
+    for ch in texto:
+        g = MICRO.get(ch, MICRO[' '])
+        for j, linha in enumerate(g):
+            for i, p in enumerate(linha):
+                if p == '#':
+                    c.set(x + i, y + j, cc)
+        x += 4
+    return x - x0 - 1
+
+
+def largura_micro(texto):
+    return len(texto) * 4 - 1
+
+
+# ------------------------------------------------------------ moeda
+def moeda(fase):
+    """Moeda de ouro girando (6 quadros)."""
     c = Canvas(16, 16)
-    cx, cy = 8.0, 9.5
+    larguras = [5.6, 4.6, 2.8, 1.0, 2.8, 4.6]
+    rx = larguras[fase % 6]
+    cx, cy, ry = 8.0, 8.0, 5.6
 
     def f(x, y, nx, ny):
-        v = -nx * 0.5 - ny * 0.6
-        if v > 0.55:
-            return OURO[0]
-        if v > 0.15:
-            return OURO[1]
-        if v > -0.35:
-            return OURO[2]
-        return OURO[3]
+        borda = nx * nx + ny * ny > 0.62
+        if borda:
+            return OURO[3] if nx > 0.2 or ny > 0.3 else OURO[2]
+        v = -nx * 0.6 - ny * 0.5
+        return OURO[0] if v > 0.45 else (OURO[1] if v > -0.2 else OURO[2])
 
-    c.elipse_fn(cx, cy, 4.2, 5.0, f)
-    # ponta da semente
-    c.set(8, 4, OURO[2])
-    c.set(7, 4, OURO[1])
-    # brotinho
-    c.set(8, 3, VERDE_S)
-    c.set(9, 2, VERDE)
-    c.set(10, 2, VERDE_H)
-    c.set(7, 2, VERDE)
-    c.set(6, 1, VERDE_H)
-    # listra central
-    for y in range(7, 13):
-        c.set(8 if y < 11 else 9, y, OURO[3] if y % 2 else OURO[2])
-    # brilho que passa (diagonal)
-    faixa = [3, 5, 7, 9, 11, 20][fase % 6]
+    c.elipse_fn(cx, cy, rx, ry, f)
+    if rx > 3:
+        # estrelinha gravada no meio
+        c.set(8, 6, OURO[3]); c.hline(7, 9, 7, OURO[3]); c.set(7, 8, OURO[3]); c.set(9, 8, OURO[3])
+    if fase % 6 == 3:
+        c.vline(8, 3, 12, OURO[3])
+    c.contorno(K)
+    if fase % 6 == 0:
+        c.set(5, 4, BRANCO)
+    return c
+
+
+# ------------------------------------------------------------ estrela da camisa
+def _estrela_poligono(cx, cy, r_ext, r_int, rot=-90):
+    pts = []
+    for i in range(10):
+        r = r_ext if i % 2 == 0 else r_int
+        a = math.radians(rot + i * 36)
+        pts.append((cx + math.cos(a) * r, cy + math.sin(a) * r))
+    return pts
+
+
+def estrela(fase):
+    """Estrela dourada da camisa (6 quadros, com um brilho que passa)."""
+    c = Canvas(16, 16)
+    pts = _estrela_poligono(8.0, 8.6, 7.4, 3.1)
+    c.poligono(pts, OURO[1])
+    # sombreado: metade de baixo/direita mais escura
     for y in range(16):
         for x in range(16):
-            if c.opaco(x, y) and abs((x + y) - faixa - 6) <= 0 and c.get(x, y) not in (VERDE, VERDE_S, VERDE_H):
+            px = c.get(x, y)
+            if px is None:
+                continue
+            if x + y > 18:
+                c.set(x, y, OURO[2])
+            if x + y < 11:
+                c.set(x, y, OURO[0])
+    # brilho que percorre a estrela
+    faixa = [2, 6, 10, 14, 18, 40][fase % 6]
+    for y in range(16):
+        for x in range(16):
+            if c.get(x, y) is not None and abs((x + y) - faixa) <= 0:
                 c.set(x, y, BRANCO)
     c.contorno(K)
-    # faíscas ao redor
-    pontos = [(2, 5), (13, 4), (13, 12), (2, 12), (8, 0), (14, 8)]
-    px, py = pontos[fase % len(pontos)]
+    faiscas = [(1, 2), (14, 1), (15, 12), (1, 13), (8, 0), (14, 6)]
+    px, py = faiscas[fase % len(faiscas)]
     c.set(px, py, OURO[0])
     return c
 
 
-# ------------------------------------------------------------ frutas
-def acai(fase):
-    c = Canvas(16, 16)
-    roxo = [cor('#b27ad6'), cor('#6e3a96'), cor('#4a2468'), cor('#2e1442')]
-    bagas = [(6, 10), (10, 10), (8, 7), (8, 12), (5, 7), (11, 7)]
-    for (bx, by) in bagas:
-        def f(x, y, nx, ny):
-            if nx < -0.2 and ny < -0.2:
-                return roxo[0]
-            if nx + ny > 0.6:
-                return roxo[3]
-            return roxo[1] if nx + ny < 0.1 else roxo[2]
-        c.elipse_fn(bx, by, 2.2, 2.2, f)
-    # cabinho
-    c.linha(8, 5, 9, 2, MARROM)
-    c.set(10, 2, VERDE)
-    c.set(11, 1, VERDE_H)
-    brilho = [(5, 6), (9, 6), (7, 9), (4, 6)][fase % 4]
-    c.set(brilho[0], brilho[1], BRANCO)
-    c.contorno(K)
-    return c
+# ------------------------------------------------------------ letras H E X A
+LETRAS_5x7 = {
+    'H': ["#...#", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
+    'E': ["#####", "#....", "#....", "####.", "#....", "#....", "#####"],
+    'X': ["#...#", "#...#", ".#.#.", "..#..", ".#.#.", "#...#", "#...#"],
+    'A': [".###.", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"],
+}
 
 
-def caju(fase):
+def letra(ch, fase):
+    """Medalha verde com a letra amarela (4 quadros: o brilho gira em volta)."""
     c = Canvas(16, 16)
-    # pedúnculo (a "fruta" do caju): amarelo -> vermelho
+
     def f(x, y, nx, ny):
-        t = (ny + 1) / 2
-        base = misturar(cor('#ffd84a'), cor('#e8452a'), min(1, max(0, t * 1.2 - 0.1 + nx * 0.25)))
-        if nx < -0.4 and ny < 0:
-            return misturar(base, BRANCO, 0.35)
-        return base
-    c.elipse_fn(8, 7.5, 4.3, 4.8, f)
-    c.elipse_fn(8, 4.5, 3.2, 2.5, f)
-    # castanha pendurada
-    c.elipse(8.5, 13.2, 2.4, 1.7, cor('#9a8a6a'))
-    c.set(7, 13, cor('#c4b48e'))
-    c.set(10, 14, cor('#6a5a42'))
-    # folhinha
-    c.set(8, 1, VERDE_S)
-    c.set(9, 0, VERDE)
-    brilho = [(6, 5), (6, 6), (7, 5), (6, 4)][fase % 4]
-    c.set(brilho[0], brilho[1], BRANCO)
+        d = nx * nx + ny * ny
+        if d > 0.72:
+            return AMARELO
+        if d > 0.55:
+            return AZUL
+        return VERDE if nx + ny > -0.6 else VERDE_H
+
+    c.elipse_fn(8, 8, 7.4, 7.4, f)
+    g = LETRAS_5x7[ch]
+    pix = set((6 + i, 5 + j) for j, l in enumerate(g) for i, p in enumerate(l) if p == '#')
+    for (x, y) in pix:
+        if (x + 1, y + 1) not in pix:
+            c.set(x + 1, y + 1, VERDE_S)   # sombra da letra
+    for (x, y) in pix:
+        c.set(x, y, AMARELO)
+    # brilho girando na borda
+    a = math.radians(-135 + fase * 90)
+    bx, by = 8 + math.cos(a) * 6.2, 8 + math.sin(a) * 6.2
+    c.set(bx, by, BRANCO)
+    c.set(bx + 1, by, cor('#fff7c2'))
     c.contorno(K)
     return c
 
 
-def guarana(fase):
-    """Guaraná: a casca vermelha se abre e mostra o 'olho' (lenda indígena)."""
-    c = Canvas(16, 16)
-    frutos = [(5.5, 9.5), (10.5, 9.5), (8, 5.5)]
-    for i, (fx, fy) in enumerate(frutos):
-        def f(x, y, nx, ny):
-            if nx < -0.3 and ny < -0.3:
-                return cor('#ff7a5a')
-            if nx + ny > 0.7:
-                return cor('#8a1a22')
-            return cor('#d8322e')
-        c.elipse_fn(fx, fy, 3.0, 3.0, f)
-        # parte branca + semente preta ("olho")
-        c.elipse(fx, fy + 0.3, 1.8, 1.6, cor('#f7f3e8'))
-        c.set(int(fx), int(fy + 0.3), cor('#1a1420'))
-        if (i + fase) % 4 == 0:
-            c.set(int(fx) - 1, int(fy) - 1, BRANCO)
-    c.set(8, 1, VERDE_S)
-    c.set(9, 1, VERDE)
-    c.set(10, 0, VERDE_H)
-    c.contorno(K)
-    return c
-
-
+# ------------------------------------------------------------ coração
 def coracao(fase, tamanho=None):
-    """Coração da Mata (vida extra): coração vermelho com uma folha."""
     c = Canvas(16, 16)
     esc = tamanho if tamanho is not None else [1.0, 1.08, 1.16, 1.08][fase % 4]
     cx, cy = 8.0, 8.5
     for y in range(16):
         for x in range(16):
-            px = (x + 0.5 - cx) / (5.2 * esc)
-            py = (y + 0.5 - cy) / (5.2 * esc)
-            py = -py
-            # equação clássica do coração
+            px = (x + 0.5 - cx) / (5.4 * esc)
+            py = -(y + 0.5 - cy) / (5.4 * esc)
             v = (px * px + py * py - 0.55) ** 3 - px * px * (py ** 3) * 1.2
             if v <= 0:
                 cc = cor('#e8323e')
@@ -149,85 +176,185 @@ def coracao(fase, tamanho=None):
                     cc = cor('#9a1a2e')
                 c.set(x, y, cc)
     c.set(5, 5, BRANCO)
-    # folhinha no topo
-    c.set(9, 3, VERDE_S)
-    c.set(10, 2, VERDE)
-    c.set(11, 2, VERDE_H)
-    c.set(11, 1, VERDE)
     c.contorno(K)
     return c
 
 
-# ------------------------------------------------------------ broto
-def broto(fase):
-    """Broto que nasce onde a semente foi recuperada (5 estágios)."""
-    c = Canvas(16, 16)
-    # montinho de terra
-    c.elipse(8, 15, 4, 1.6, MARROM)
-    c.hline(5, 11, 14, cor('#a8744a'))
-    if fase >= 1:
-        c.vline(8, 15 - (2 + fase * 2), 14, VERDE_S)
-    if fase >= 2:
-        c.set(9, 12, VERDE)
-        c.set(10, 11, VERDE_H)
-        c.set(7, 13, VERDE)
-    if fase >= 3:
-        c.set(6, 10, VERDE)
-        c.set(5, 9, VERDE_H)
-        c.set(7, 10, VERDE)
-        c.set(10, 8, VERDE)
-        c.set(11, 7, VERDE_H)
-        c.set(9, 8, VERDE)
-    if fase >= 4:
-        # florzinha amarela de ipê
-        topo = 15 - (2 + fase * 2)
-        for (dx, dy) in ((0, -1), (-1, 0), (1, 0), (0, 1)):
-            c.set(8 + dx, topo + dy, cor('#ffd84a'))
-        c.set(8, topo, cor('#f08a2a'))
-    c.contorno(K)
-    return c
-
-
-# ------------------------------------------------------------ totem
-def totem(estado, fase=0):
-    """Totem de madeira: checkpoint. Acende os olhos quando ativado."""
+# ------------------------------------------------------------ bandeirinha de escanteio (checkpoint)
+def bandeirinha(estado, fase=0):
     c = Canvas(16, 32)
-    madeira = cor('#9a6a40')
-    madeira_s = cor('#6a4428')
-    madeira_h = cor('#c8925a')
-    c.rect(4, 8, 8, 24, madeira)
-    c.vline(4, 8, 31, madeira_s)
-    c.vline(11, 8, 31, madeira_s)
-    c.vline(6, 9, 30, madeira_h)
-    # entalhes (faixas)
-    for y in (15, 23):
-        c.hline(4, 11, y, madeira_s)
-    # asas/folhas no topo
-    c.rect(1, 9, 3, 2, VERDE_S)
-    c.rect(12, 9, 3, 2, VERDE_S)
-    c.set(0, 8, VERDE)
-    c.set(15, 8, VERDE)
-    # rosto de cima
-    aceso = estado == 'ligado'
-    olho = cor('#ffe066') if aceso else cor('#3a2a1a')
-    c.rect(5, 11, 2, 2, olho)
-    c.rect(9, 11, 2, 2, olho)
-    c.hline(6, 9, 14, madeira_s)
-    # rosto de baixo
-    c.rect(5, 18, 2, 1, olho if aceso else madeira_s)
-    c.rect(9, 18, 2, 1, olho if aceso else madeira_s)
-    c.rect(6, 20, 4, 2, madeira_s)
-    # chama no topo quando aceso
-    if aceso:
-        alt = 6 + (fase % 2)
-        for i in range(alt):
-            larg = max(0, 2 - i // 2)
-            cc = [cor('#fff6b8'), cor('#ffdc4a'), cor('#ff9e2c'), cor('#ec4a2a')][min(3, i // 2)]
-            for dx in range(-larg, larg + 1):
-                c.set(8 + dx + (1 if (i > 3 and fase % 2) else 0), 7 - i, cc)
+    # mastro branco com listras
+    for y in range(4, 32):
+        cc = cor('#f4f4f4') if (y // 3) % 2 == 0 else cor('#c9c9d6')
+        c.set(4, y, cc)
+        c.set(5, y, cor('#c9c9d6'))
+    c.rect(3, 30, 4, 2, cor('#8a8a96'))
+    c.set(4, 3, cor('#ffe066'))
+    if estado == 'desligada':
+        # pano cinza pendurado
+        for y in range(4, 13):
+            larg = 3 if y < 11 else 2
+            c.hline(6, 6 + larg, y, cor('#8a8894') if y % 3 else cor('#6e6c78'))
     else:
-        c.rect(6, 6, 4, 2, madeira_s)
+        # bandeira verde e amarela tremulando
+        for x in range(6, 16):
+            onda = int(round(math.sin((x - 6) * 0.9 + fase * 2.2) * 1.2))
+            for y in range(4, 11):
+                yy = y + onda
+                cc = VERDE
+                dx = abs(x - 10.5) / 4.5
+                dy = abs(y - 7.0) / 3.0
+                if dx + dy < 0.85:
+                    cc = AMARELO
+                if dx * dx + dy * dy < 0.12:
+                    cc = AZUL
+                c.set(x, yy, cc)
     c.contorno(K)
+    return c
+
+
+# ------------------------------------------------------------ bola
+def bola():
+    """Bola de futebol 8x8 (meio tile)."""
+    c = Canvas(8, 8)
+    preto = cor('#24202c')
+    cinza = cor('#c8ccd8')
+    c.elipse_fn(4, 4, 3.8, 3.8, lambda x, y, nx, ny: cinza if nx + ny > 0.7 else BRANCO)
+    # pentágono central e gomos
+    c.rect(3, 3, 2, 2, preto)
+    c.set(4, 2, preto)
+    for (x, y) in ((1, 1), (6, 1), (0, 5), (7, 4), (4, 7), (3, 7)):
+        c.set(x, y, preto)
+    c.set(2, 2, cor('#ffffff'))
+    c.contorno(K)
+    return c
+
+
+def bola_ui():
+    """Bola grande para o HUD (16x16)."""
+    c = Canvas(16, 16)
+    preto = cor('#24202c')
+    cinza = cor('#c8ccd8')
+    c.elipse_fn(8, 8, 7, 7, lambda x, y, nx, ny: cinza if nx + ny > 0.8 else BRANCO)
+    c.poligono([(8, 5), (11, 7.2), (10, 10.6), (6, 10.6), (5, 7.2)], preto)
+    for pts in ([(8, 1), (10, 1.5), (8, 3)], [(1.5, 6), (3, 4.5), (3, 8)], [(14.5, 6), (13, 4.5), (13, 8)],
+                [(4, 13.5), (6, 12.5), (6, 15)], [(12, 13.5), (10, 12.5), (10, 15)]):
+        c.poligono(pts, preto)
+    c.set(5, 3, BRANCO)
+    c.contorno(K)
+    return c
+
+
+def rastro():
+    c = Canvas(4, 4)
+    c.rect(1, 0, 2, 4, BRANCO)
+    c.rect(0, 1, 4, 2, BRANCO)
+    return c
+
+
+def confete():
+    c = Canvas(3, 2)
+    c.rect(0, 0, 3, 2, BRANCO)
+    return c
+
+
+# ------------------------------------------------------------ cartão vermelho
+def cartao():
+    c = Canvas(8, 11)
+    c.rect(1, 0, 6, 9, cor('#e8232e'))
+    c.vline(1, 0, 8, cor('#ff6a6a'))
+    c.vline(6, 1, 8, cor('#a3121e'))
+    c.hline(1, 6, 8, cor('#a3121e'))
+    c.contorno(K)
+    return c
+
+
+# ------------------------------------------------------------ taça
+def taca():
+    """Taça dourada genérica (16x24, pivô embaixo)."""
+    c = Canvas(16, 26)
+
+    def ouro(x, y, nx, ny):
+        v = -nx * 0.7 - ny * 0.3
+        return OURO[0] if v > 0.5 else (OURO[1] if v > -0.1 else (OURO[2] if v > -0.6 else OURO[3]))
+
+    c.elipse_fn(8, 7, 6, 6.5, ouro)
+    c.rect(2, 1, 13, 3, None)
+    c.hline(2, 13, 1, OURO[1])
+    c.hline(2, 13, 2, OURO[0])
+    # alças
+    for x0 in (1, 14):
+        c.vline(x0, 3, 9, OURO[2])
+        c.set(x0, 10, OURO[3])
+    # haste e base verde
+    c.rect(7, 13, 2, 6, OURO[2])
+    c.set(7, 13, OURO[1])
+    c.rect(5, 18, 6, 2, OURO[1])
+    c.rect(3, 20, 10, 5, VERDE)
+    c.hline(3, 12, 20, VERDE_H)
+    c.hline(3, 12, 24, VERDE_S)
+    c.hline(4, 11, 22, AMARELO)
+    # estrelinha gravada
+    c.set(8, 6, OURO[3]); c.hline(7, 9, 7, OURO[3]); c.set(7, 8, OURO[3]); c.set(9, 8, OURO[3])
+    c.set(4, 5, BRANCO)
+    c.contorno(K)
+    return c
+
+
+# ------------------------------------------------------------ placar do estádio
+def placar():
+    """Telão do placar (96x40). Os números são desenhados pelo jogo com os sprites led_N."""
+    c = Canvas(96, 40)
+    moldura = [cor('#3a3e4c'), cor('#5c6276'), cor('#262832')]
+    c.rect(0, 0, 96, 40, moldura[0])
+    c.hline(0, 95, 0, moldura[1])
+    c.hline(0, 95, 39, moldura[2])
+    c.rect(3, 3, 90, 34, cor('#0a0c14'))
+    # pontinhos de LED apagados
+    for y in range(4, 36, 2):
+        for x in range(4, 92, 2):
+            c.set(x, y, cor('#141826'))
+    # bandeirinhas e siglas
+    # Brasil
+    c.rect(7, 6, 10, 7, VERDE)
+    c.poligono([(12, 6.6), (16.4, 9.5), (12, 12.4), (7.6, 9.5)], AMARELO)
+    c.rect(11, 8, 2, 3, AZUL)
+    micro_texto(c, 20, 7, "BRA", AMARELO)
+    # Argentina
+    c.rect(79, 6, 10, 7, CELESTE)
+    c.hline(79, 88, 8, BRANCO)
+    c.hline(79, 88, 9, BRANCO)
+    c.hline(79, 88, 10, BRANCO)
+    c.set(84, 9, cor('#ffd21f'))
+    micro_texto(c, 65, 7, "ARG", cor('#a8dcff'))
+    # "X" no meio
+    for i in range(5):
+        c.set(46 + i, 22 + i, cor('#ff9e2c'))
+        c.set(50 - i, 22 + i, cor('#ff9e2c'))
+    c.contorno(K)
+    return c
+
+
+LED = {
+    '0': ["#####", "#...#", "#...#", "#...#", "#...#", "#...#", "#####"],
+    '1': ["..#..", ".##..", "..#..", "..#..", "..#..", "..#..", ".###."],
+    '2': ["#####", "....#", "....#", "#####", "#....", "#....", "#####"],
+    '3': ["#####", "....#", "....#", ".####", "....#", "....#", "#####"],
+    '4': ["#...#", "#...#", "#...#", "#####", "....#", "....#", "....#"],
+    '5': ["#####", "#....", "#....", "#####", "....#", "....#", "#####"],
+    '6': ["#####", "#....", "#....", "#####", "#...#", "#...#", "#####"],
+    '7': ["#####", "....#", "...#.", "..#..", "..#..", "..#..", "..#.."],
+    '8': ["#####", "#...#", "#...#", "#####", "#...#", "#...#", "#####"],
+    '9': ["#####", "#...#", "#...#", "#####", "....#", "....#", "#####"],
+}
+
+
+def led(digito):
+    c = Canvas(5, 7)
+    for j, linha in enumerate(LED[digito]):
+        for i, p in enumerate(linha):
+            if p == '#':
+                c.set(i, j, cor('#ffb03a'))
     return c
 
 
@@ -242,18 +369,17 @@ def brilho(fase):
         c.set(8, 8 + i, com_alpha(col, a))
     if fase in (1, 2):
         for d in (1, 2):
-            c.set(8 + d, 8 + d, com_alpha(col, 180))
-            c.set(8 - d, 8 - d, com_alpha(col, 180))
-            c.set(8 + d, 8 - d, com_alpha(col, 180))
-            c.set(8 - d, 8 + d, com_alpha(col, 180))
+            for (sx, sy) in ((1, 1), (-1, -1), (1, -1), (-1, 1)):
+                c.set(8 + d * sx, 8 + d * sy, com_alpha(col, 180))
     return c
 
 
 def poeira(fase):
+    """Nuvenzinha de areia/poeira levantada pelos pés."""
     c = Canvas(16, 16)
     r = [2.0, 3.2, 4.0, 4.4][fase % 4]
     a = [230, 200, 140, 70][fase % 4]
-    base = cor('#e8dcc8', a)
+    base = cor('#f0e2c0', a)
     c.elipse(8, 11, r, r * 0.7, base)
     c.elipse(5, 12, r * 0.6, r * 0.45, base)
     c.elipse(11, 12, r * 0.6, r * 0.45, base)
@@ -263,13 +389,14 @@ def poeira(fase):
 def fumaca(fase):
     c = Canvas(16, 16)
     r = [2.5, 3.5, 4.5, 5.0][fase % 4]
-    a = [200, 170, 120, 60][fase % 4]
-    c.elipse(8, 9, r, r * 0.85, cor('#8a8894', a))
-    c.elipse(7, 8, r * 0.6, r * 0.5, cor('#b8b6c2', a))
+    a = [210, 170, 120, 60][fase % 4]
+    c.elipse(8, 9, r, r * 0.85, cor('#d8d6e0', a))
+    c.elipse(7, 8, r * 0.6, r * 0.5, cor('#ffffff', a))
     return c
 
 
-def estrela_tonta(fase):
+def tontura(fase):
+    """Estrelinhas girando em volta da cabeça de quem está tonto."""
     c = Canvas(8, 8)
     amarelo = cor('#ffe066')
     if fase == 0:
@@ -290,72 +417,17 @@ def estrela_tonta(fase):
     return c
 
 
-def nota(fase):
-    c = Canvas(8, 8)
-    n = cor('#fff6b8')
-    if fase == 0:
-        c.vline(4, 1, 5, n)
-        c.hline(4, 6, 1, n)
-        c.rect(2, 5, 3, 2, n)
-    else:
-        c.vline(2, 1, 5, n)
-        c.vline(6, 1, 4, n)
-        c.hline(2, 6, 1, n)
-        c.rect(1, 5, 2, 2, n)
-        c.rect(5, 4, 2, 2, n)
-    c.contorno(K)
-    return c
-
-
-def pegada():
-    """Pegada do Curupira: aponta para trás, para enganar os caçadores!"""
-    c = Canvas(8, 8)
-    p = cor('#4a3020', 170)
-    # calcanhar à direita, dedos à esquerda
-    c.hline(2, 5, 4, p)
-    c.hline(3, 5, 5, p)
-    c.set(1, 3, p)
-    c.set(2, 3, p)
-    c.set(1, 5, p)
-    return c
-
-
-def brasa(fase):
-    c = Canvas(4, 4)
-    if fase == 0:
-        c.rect(1, 1, 2, 2, cor('#ffdc4a'))
-        c.set(1, 1, cor('#fff6b8'))
-    else:
-        c.rect(1, 1, 2, 2, cor('#ff7a2a'))
-        c.set(2, 2, cor('#ec4a2a'))
-    return c
-
-
-def folha(fase):
-    c = Canvas(8, 8)
-    if fase == 0:
-        c.hline(2, 5, 3, VERDE)
-        c.hline(3, 6, 4, VERDE_S)
-        c.set(1, 3, VERDE_H)
-    else:
-        c.vline(3, 2, 5, VERDE)
-        c.vline(4, 3, 6, VERDE_S)
-        c.set(3, 1, VERDE_H)
-    return c
-
-
 def seta():
-    """Seta que aponta para a semente mais próxima."""
+    """Seta que aponta para o item obrigatório mais próximo."""
     c = Canvas(16, 16)
-    ouro = cor('#ffe066')
-    c.poligono([(3, 6), (9, 6), (9, 3), (14, 8), (9, 13), (9, 10), (3, 10)], ouro)
+    c.poligono([(3, 6), (9, 6), (9, 3), (14, 8), (9, 13), (9, 10), (3, 10)], AMARELO)
     c.hline(4, 9, 7, cor('#fff7c2'))
     c.contorno(K)
     return c
 
 
 def anel():
-    """Anel do assobio (onda sonora), branco com transparência."""
+    """Anel branco (onda de choque da folha seca)."""
     c = Canvas(64, 64)
     for y in range(64):
         for x in range(64):
@@ -369,7 +441,6 @@ def anel():
 
 
 def luz_suave():
-    """Halo radial suave (usado como brilho atrás de coisas mágicas)."""
     c = Canvas(32, 32)
     for y in range(32):
         for x in range(32):
@@ -392,91 +463,59 @@ def ui_coracao(cheio):
             px = base.get(x, y)
             if px is None:
                 continue
-            if px == K:
-                c.set(x, y, cor('#1a1420'))
-            else:
-                c.set(x, y, cor('#4a3a4a'))
-    return c
-
-
-def ui_semente():
-    return semente(5)
-
-
-def ui_assobio():
-    c = Canvas(16, 16)
-    n = cor('#fff6b8')
-    # "ondas" de som + nota
-    c.vline(7, 3, 10, n)
-    c.hline(7, 10, 3, n)
-    c.hline(7, 10, 4, n)
-    c.vline(10, 3, 9, n)
-    c.rect(5, 10, 3, 2, n)
-    c.rect(8, 9, 3, 2, n)
-    for (x, y) in ((12, 5), (13, 7), (12, 9)):
-        c.set(x, y, cor('#a6e66c'))
-    for (x, y) in ((2, 5), (1, 7), (2, 9)):
-        c.set(x, y, cor('#a6e66c'))
-    c.contorno(K)
+            c.set(x, y, cor('#1a1420') if px == K else cor('#4a3a4a'))
     return c
 
 
 def ui_botao():
-    """Botão de madeira (9-slice, borda de 6 px)."""
+    """Botão verde com borda amarela (9-slice, borda de 6 px)."""
     c = Canvas(48, 16)
     for y in range(16):
         for x in range(48):
-            cc = cor('#9a6a40')
+            cc = VERDE
             if y in (1, 2):
-                cc = cor('#c8925a')
+                cc = VERDE_H
             if y in (12, 13):
-                cc = cor('#6a4428')
-            if (x * 7 + y * 3) % 23 == 0 and 3 < y < 11:
-                cc = cor('#865a36')
+                cc = VERDE_S
             c.set(x, y, cc)
     for x in range(48):
         c.set(x, 0, K)
         c.set(x, 15, K)
-        c.set(x, 14, cor('#4a2e1c'))
+        c.set(x, 14, cor('#0c4a24'))
     for y in range(16):
         c.set(0, y, K)
         c.set(47, y, K)
-    # pregos
+    for x in range(2, 46):
+        c.set(x, 3 if x % 2 else 3, com_alpha(AMARELO, 120))
     for (x, y) in ((3, 4), (44, 4), (3, 10), (44, 10)):
-        c.set(x, y, cor('#e4eaf0'))
-    c.set(0, 0, None)
-    c.set(47, 0, None)
-    c.set(0, 15, None)
-    c.set(47, 15, None)
+        c.set(x, y, AMARELO)
+    for (x, y) in ((0, 0), (47, 0), (0, 15), (47, 15)):
+        c.set(x, y, None)
     return c
 
 
 def ui_painel():
-    """Painel escuro com moldura de madeira (9-slice, borda de 12 px)."""
+    """Painel azul-escuro com moldura verde e amarela (9-slice, borda de 12 px)."""
     c = Canvas(48, 48)
-    fundo = cor('#1c1626', 235)
+    fundo = cor('#101a3c', 238)
     for y in range(48):
         for x in range(48):
             c.set(x, y, fundo)
-    moldura = cor('#8a5a3c')
-    for i in range(5):
-        cc = [K, cor('#6a4428'), moldura, cor('#c8925a'), cor('#6a4428')][i]
+    camadas = [K, VERDE_S, VERDE, AMARELO, VERDE_S]
+    for i, cc in enumerate(camadas):
         for x in range(i, 48 - i):
             c.set(x, i, cc)
             c.set(x, 47 - i, cc)
         for y in range(i, 48 - i):
             c.set(i, y, cc)
             c.set(47 - i, y, cc)
-    # folhas nos cantos
-    for (x, y) in ((1, 1), (43, 1), (1, 43), (43, 43)):
-        c.rect(x, y, 4, 4, VERDE)
-        c.set(x + 1, y + 1, VERDE_H)
-        c.set(x + 3, y + 3, VERDE_S)
+    # estrelinhas nos cantos
+    for (x, y) in ((2, 2), (45, 2), (2, 45), (45, 45)):
+        c.set(x, y, BRANCO)
     return c
 
 
 def ui_tecla():
-    """Tecla (9-slice, borda de 5 px) para a tela 'Como jogar'."""
     c = Canvas(16, 16)
     for y in range(16):
         for x in range(16):
@@ -492,10 +531,8 @@ def ui_tecla():
     for y in range(16):
         c.set(0, y, K)
         c.set(15, y, K)
-    c.set(0, 0, None)
-    c.set(15, 0, None)
-    c.set(0, 15, None)
-    c.set(15, 15, None)
+    for (x, y) in ((0, 0), (15, 0), (0, 15), (15, 15)):
+        c.set(x, y, None)
     return c
 
 
@@ -505,20 +542,18 @@ def ui_branco():
     return c
 
 
+# ------------------------------------------------------------ listas
 def quadros_itens():
     q = []
     for i in range(6):
-        q.append(('semente_%d' % i, semente(i)))
-    for i in range(4):
-        q.append(('acai_%d' % i, acai(i)))
-    for i in range(4):
-        q.append(('caju_%d' % i, caju(i)))
-    for i in range(4):
-        q.append(('guarana_%d' % i, guarana(i)))
+        q.append(('moeda_%d' % i, moeda(i)))
+    for i in range(6):
+        q.append(('estrela_%d' % i, estrela(i)))
+    for ch in 'HEXA':
+        for i in range(4):
+            q.append(('letra_%s_%d' % (ch.lower(), i), letra(ch, i)))
     for i in range(4):
         q.append(('coracao_%d' % i, coracao(i)))
-    for i in range(5):
-        q.append(('broto_%d' % i, broto(i)))
     for i in range(4):
         q.append(('brilho_%d' % i, brilho(i)))
     for i in range(4):
@@ -526,22 +561,21 @@ def quadros_itens():
     for i in range(4):
         q.append(('fumaca_%d' % i, fumaca(i)))
     q.append(('seta', seta()))
+    q.append(('bola_ui', bola_ui()))
     return q
 
 
 def quadros_pequenos():
-    q = []
+    q = [('bola', bola()), ('rastro', rastro()), ('confete', confete()), ('cartao', cartao())]
     for i in range(2):
-        q.append(('estrela_%d' % i, estrela_tonta(i)))
-    for i in range(2):
-        q.append(('nota_%d' % i, nota(i)))
-    q.append(('pegada', pegada()))
-    for i in range(2):
-        q.append(('folha_%d' % i, folha(i)))
+        q.append(('tontura_%d' % i, tontura(i)))
+    for d in '0123456789':
+        q.append(('led_%s' % d, led(d)))
     return q
 
 
-def quadros_totem():
-    return [('totem_desligado', totem('desligado')),
-            ('totem_ligado_0', totem('ligado', 0)),
-            ('totem_ligado_1', totem('ligado', 1))]
+def quadros_bandeirinha():
+    return [('bandeirinha_desligada', bandeirinha('desligada')),
+            ('bandeirinha_ligada_0', bandeirinha('ligada', 0)),
+            ('bandeirinha_ligada_1', bandeirinha('ligada', 1)),
+            ('bandeirinha_ligada_2', bandeirinha('ligada', 2))]

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>
     /// Pequeno sintetizador "8 bits": cria todos os efeitos sonoros e as músicas
@@ -125,24 +125,18 @@ namespace Curupira
                     b = Buffer(0.18f);
                     Tom(b, 0, 0.18f, 280f, 620f, Onda.QuadradaFina, 0.35f);
                     break;
-                case Som.Acai:
-                    b = Buffer(0.14f);
+                case Som.Moeda:
+                    b = Buffer(0.16f);
                     Tom(b, 0, 0.06f, 1318f, 1318f, Onda.Quadrada, 0.3f);
-                    Tom(b, S(0.05f), 0.09f, 1976f, 1976f, Onda.Quadrada, 0.3f);
+                    Tom(b, S(0.05f), 0.11f, 1976f, 1976f, Onda.Quadrada, 0.3f, 0.005f, 0.08f);
                     break;
-                case Som.Fruta:
-                    b = Buffer(0.22f);
-                    Tom(b, 0, 0.07f, 784f, 784f, Onda.Quadrada, 0.3f);
-                    Tom(b, S(0.06f), 0.07f, 1047f, 1047f, Onda.Quadrada, 0.3f);
-                    Tom(b, S(0.12f), 0.1f, 1568f, 1568f, Onda.Quadrada, 0.3f);
-                    break;
-                case Som.Semente:
-                    b = Buffer(0.7f);
+                case Som.ItemObrigatorio:
+                    b = Buffer(0.8f);
                     {
-                        int[] notas = { 72, 76, 79, 84, 88 };
+                        int[] notas = { 72, 76, 79, 84, 88, 91 };
                         for (int i = 0; i < notas.Length; i++)
                             Tom(b, S(i * 0.07f), 0.3f, FreqMidi(notas[i]), FreqMidi(notas[i]), Onda.Triangulo, 0.45f, 0.005f, 0.25f);
-                        Tom(b, S(0.35f), 0.35f, FreqMidi(96), FreqMidi(96), Onda.Seno, 0.2f, 0.01f, 0.3f);
+                        Tom(b, S(0.42f), 0.35f, FreqMidi(96), FreqMidi(96), Onda.Seno, 0.2f, 0.01f, 0.3f);
                     }
                     break;
                 case Som.Vida:
@@ -159,17 +153,60 @@ namespace Curupira
                     Tom(b, 0, 0.2f, 1f, 1f, Onda.Ruido, 0.25f);
                     break;
                 case Som.Pisao:
+                    // "boing" de quem pula na cabeça
+                    b = Buffer(0.3f);
+                    Tom(b, 0, 0.1f, 160f, 60f, Onda.Seno, 0.8f);
+                    Tom(b, S(0.03f), 0.25f, 300f, 700f, Onda.Triangulo, 0.3f, 0.005f, 0.1f, 0.03f);
+                    break;
+                case Som.Chute:
+                    // pancada seca no couro da bola
+                    b = Buffer(0.2f);
+                    Tom(b, 0, 0.09f, 220f, 70f, Onda.Seno, 0.9f, 0.001f, 0.06f);
+                    Tom(b, 0, 0.04f, 1f, 1f, Onda.Ruido, 0.45f, 0.001f, 0.03f);
+                    Tom(b, S(0.02f), 0.12f, 900f, 500f, Onda.QuadradaFina, 0.12f);
+                    break;
+                case Som.Cavadinha:
                     b = Buffer(0.25f);
-                    Tom(b, 0, 0.12f, 180f, 50f, Onda.Seno, 0.9f);
-                    Tom(b, 0, 0.08f, 1f, 1f, Onda.Ruido, 0.3f);
-                    Tom(b, S(0.06f), 0.15f, 600f, 900f, Onda.QuadradaFina, 0.2f);
+                    Tom(b, 0, 0.07f, 260f, 120f, Onda.Seno, 0.7f, 0.001f, 0.05f);
+                    Tom(b, S(0.03f), 0.2f, 500f, 1100f, Onda.Triangulo, 0.25f, 0.005f, 0.08f);
                     break;
-                case Som.Assobio:
-                    b = Buffer(0.75f);
-                    Tom(b, 0, 0.25f, 1400f, 2300f, Onda.Seno, 0.5f, 0.02f, 0.05f, 0.01f);
-                    Tom(b, S(0.27f), 0.45f, 2300f, 1700f, Onda.Seno, 0.5f, 0.02f, 0.2f, 0.02f);
+                case Som.ChuteForte:
+                    // a folha seca: estouro + assovio da bola cortando o ar
+                    b = Buffer(0.7f);
+                    Tom(b, 0, 0.16f, 180f, 40f, Onda.Seno, 1f, 0.001f, 0.1f);
+                    Tom(b, 0, 0.12f, 1f, 1f, Onda.Ruido, 0.55f, 0.001f, 0.1f);
+                    Tom(b, S(0.04f), 0.6f, 2400f, 700f, Onda.Seno, 0.18f, 0.02f, 0.3f, 0.02f);
                     break;
-                case Som.Checkpoint:
+                case Som.CargaCheia:
+                    b = Buffer(0.25f);
+                    Tom(b, 0, 0.08f, FreqMidi(84), FreqMidi(84), Onda.QuadradaFina, 0.3f);
+                    Tom(b, S(0.07f), 0.15f, FreqMidi(91), FreqMidi(91), Onda.QuadradaFina, 0.3f, 0.005f, 0.1f);
+                    break;
+                case Som.Quique:
+                    b = Buffer(0.08f);
+                    Tom(b, 0, 0.06f, 180f, 90f, Onda.Seno, 0.7f, 0.001f, 0.04f);
+                    break;
+                case Som.BolaVolta:
+                    b = Buffer(0.3f);
+                    Tom(b, 0, 0.28f, 1f, 1f, Onda.Ruido, 0.15f, 0.08f, 0.15f);
+                    Tom(b, 0, 0.28f, 400f, 900f, Onda.Seno, 0.15f, 0.05f, 0.1f);
+                    break;
+                case Som.Expulso:
+                    // cartão vermelho: "zap" descendo + estalo
+                    b = Buffer(0.45f);
+                    Tom(b, 0, 0.06f, 1f, 1f, Onda.Ruido, 0.4f, 0.001f, 0.05f);
+                    Tom(b, S(0.02f), 0.35f, 1400f, 180f, Onda.Quadrada, 0.25f, 0.005f, 0.1f);
+                    Tom(b, S(0.05f), 0.3f, 700f, 90f, Onda.Triangulo, 0.3f, 0.005f, 0.1f);
+                    break;
+                case Som.Combo:
+                    b = Buffer(0.6f);
+                    {
+                        int[] notas = { 72, 79, 84, 88, 91, 96 };
+                        for (int i = 0; i < notas.Length; i++)
+                            Tom(b, S(i * 0.05f), 0.16f, FreqMidi(notas[i]), FreqMidi(notas[i]), Onda.Quadrada, 0.22f);
+                    }
+                    break;
+                case Som.Bandeirinha:
                     b = Buffer(0.6f);
                     Tom(b, 0, 0.15f, FreqMidi(72), FreqMidi(72), Onda.Triangulo, 0.4f);
                     Tom(b, S(0.12f), 0.15f, FreqMidi(79), FreqMidi(79), Onda.Triangulo, 0.4f);
@@ -187,14 +224,6 @@ namespace Curupira
                     b = Buffer(0.6f);
                     Tom(b, 0, 0.55f, 1f, 1f, Onda.Ruido, 0.35f, 0.01f, 0.4f);
                     Tom(b, 0, 0.3f, 400f, 120f, Onda.Seno, 0.4f);
-                    break;
-                case Som.Renascer:
-                    b = Buffer(0.9f);
-                    {
-                        int[] notas = { 60, 64, 67, 72, 76, 79 };
-                        for (int i = 0; i < notas.Length; i++)
-                            Tom(b, S(i * 0.1f), 0.5f, FreqMidi(notas[i]), FreqMidi(notas[i]), Onda.Seno, 0.3f, 0.02f, 0.4f);
-                    }
                     break;
                 case Som.Queda:
                     b = Buffer(0.7f);
@@ -279,7 +308,7 @@ namespace Curupira
             return null;
         }
 
-        /// <summary>Fase 1: baião em Sol mixolídio (zabumba, triângulo e baixo).</summary>
+        /// <summary>Fase 1 (praia): baião em Sol mixolídio (zabumba, triângulo e baixo).</summary>
         static AudioClip MusicaFase1()
         {
             const float passo = 60f / 124f / 4f;
@@ -321,7 +350,7 @@ namespace Curupira
             return Clip("musica_fase1", b);
         }
 
-        /// <summary>Fase 2: noite misteriosa em Ré menor (dórico), com arpejos.</summary>
+        /// <summary>Fase 2 (a final): tensão da noite de decisão, em Ré menor (dórico), com arpejos.</summary>
         static AudioClip MusicaFase2()
         {
             const float passo = 60f / 100f / 4f;
@@ -435,18 +464,23 @@ namespace Curupira
     public enum Som
     {
         Pulo,
-        Acai,
-        Fruta,
-        Semente,
+        Moeda,
+        ItemObrigatorio,
         Vida,
         Dano,
         Pisao,
-        Assobio,
-        Checkpoint,
+        Chute,
+        Cavadinha,
+        ChuteForte,
+        CargaCheia,
+        Quique,
+        BolaVolta,
+        Expulso,
+        Combo,
+        Bandeirinha,
         Clique,
         Foco,
         Splash,
-        Renascer,
         Queda,
     }
 

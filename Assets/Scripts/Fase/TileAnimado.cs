@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>
     /// Tile que troca de sprite sozinho (animação feita pelo próprio Tilemap).
