@@ -15,7 +15,7 @@ O craque não pisa em ninguém para vencer: a arma dele é a **bola**. Cada arge
 
 ## 2. Como jogar
 
-As instruções também aparecem direto na **tela inicial**.
+Tudo isso aparece direto na **tela inicial**, em duas colunas: **COMO JOGAR** (os controles) e **OBJETIVO / COMO GANHAR / COMO PERDER**. O jogo **sempre começa pela tela inicial**: mesmo dando Play numa fase no editor, ele abre primeiro o menu.
 
 | Tecla (teclado)        | Gamepad          | Ação |
 |------------------------|------------------|------|
@@ -40,14 +40,14 @@ Uma **seta amarela** perto do craque aponta para o item obrigatório mais próxi
 | Requisito | Como está no jogo |
 |---|---|
 | Jogo do tipo plataforma | Corrida, pulo com *coyote time*, *buffer* de pulo e pulo variável; plataformas atravessáveis por baixo e plataformas móveis |
-| Tela inicial com orientações diretas de como jogar | Cena `Menu`: título, história em duas linhas, **tabela de controles** e dicas na própria tela, com os botões JOGAR e SAIR |
+| Tela inicial com orientações diretas de como jogar | Cena `Menu`, que é sempre a primeira: **COMO JOGAR** (tabela com todas as teclas), **OBJETIVO** (5 estrelas na fase 1, letras H-E-X-A na fase 2), **COMO GANHAR** (pegar todos os itens das duas fases) e **COMO PERDER** (cada encostada num argentino tira 1 vida; vidas em zero = derrota), com os botões JOGAR e SAIR. Durante a fase, o HUD mostra o objetivo o tempo todo |
 | Duas fases (cenas) | **Fase 1 – Pelada na Praia** (`Fase1`) e **Fase 2 – A Final no Maracanã** (`Fase2`) |
 | Tratamento de colisão com as plataformas | Chão em Tilemap com **Tilemap Collider 2D + Composite Collider 2D + Rigidbody 2D (Static)**, igual ao passo a passo dos slides. Plataformas com **Platform Effector 2D** (atravessáveis por baixo), perigos com Box Collider 2D, mar e fosso com *trigger*. A bola também é um corpo físico e quica no chão e nas paredes |
 | Fundo com parallax scrolling | Praia: 5 camadas (céu, nuvens com gaivotas, Pão de Açúcar e Cristo Redentor, mar com veleiros, orla com guarda-sóis). Estádio: céu com fogos, refletores, torcida animada, placas de publicidade e o **placar ao vivo**. Cada camada anda numa velocidade diferente em relação à câmera e se repete sem fim |
 | Jogador, inimigos e itens com sprites animados | Craque: parado, correndo, pulo, queda, chute, carregando a folha seca, **embaixadinha**, dano e vitória. Argentinos: andar, arrancada, pulo, tonto e expulso. Itens: moeda girando, estrela brilhando, letras, coração, bandeirinha tremulando. Tiles animados: mar, fosso, ouriços e sinalizadores |
 | Itens colecionáveis | Moedas (+10), coração (+1 vida), estrelas e letras (obrigatórias, +250) |
 | Pontuação | Pontos no HUD, combos (DOBLETE +100, HAT-TRICK +300, GOLEADA +500), bônus de +1000 por fase e **recorde salvo** (PlayerPrefs) |
-| Cena final informando vitória ou derrota, com botão para reiniciar | Cena `FimDeJogo`: **VITÓRIA!** (o craque ergue a taça sob confete) ou **DERROTA...**, com pontos, itens, moedas, argentinos expulsos, recorde e os botões **JOGAR NOVAMENTE** e **MENU PRINCIPAL** |
+| Cena final informando vitória ou derrota, com botão para reiniciar | Cena `FimDeJogo`: **VITÓRIA!** ("você coletou todos os itens: as 5 estrelas e as letras H-E-X-A", o craque ergue a taça sob confete) ou **DERROTA...** ("os argentinos te machucaram e suas vidas chegaram a zero"), com pontos, itens, moedas, argentinos expulsos e recorde, e os botões **REINICIAR** (Enter também reinicia; volta para a Fase 1 com tudo zerado) e **MENU PRINCIPAL** |
 | Perde se os inimigos machucarem o jogador e as vidas chegarem a zero | 3 vidas (máximo 5). Encostar num argentino, num ouriço ou num sinalizador, ou cair no mar ou no fosso, tira 1 vida. Com 0 vidas: Derrota |
 | Ganha se coletar todos os itens predeterminados | 5 estrelas na Fase 1 levam à Fase 2; as 4 letras H-E-X-A na Fase 2 dão a Vitória |
 
@@ -81,7 +81,7 @@ São **3 grupos de testes** (Unity Test Framework / NUnit):
 |---|---|
 | `Assets/Tests/EditMode/Logica` | Regras sem Unity: pontuação, vidas e recorde; os 3 chutes e a barra da folha seca; quando a bola volta e quando é dominada; combos; narrador; leitura dos mapas e **se todos os itens, corações, moedas e bandeirinhas são alcançáveis** com o pulo do craque; e se a fonte pixelada tem todas as letras dos textos |
 | `Assets/Tests/EditMode/Unity` | Recursos do jogo dentro do Unity: todos os sprites e animações existem; as 4 cenas estão na Build na ordem certa; as camadas de física; a bola quica no chão mas não no jogador; todos os sons e músicas são gerados. E o **projeto 2D** (`TestesProjeto2D`): editor em modo 2D, URP com **2D Renderer**, câmeras ortográficas, nenhum componente 3D nas cenas, nenhuma física 3D no código, sprites importados como Sprite e a versão do URP igual à do editor 6000.5.10f1 |
-| `Assets/Tests/PlayMode` | Jogando de verdade: o chute rasteiro expulsa e o argentino some; a folha seca atravessa dois e dá DOBLETE; pisar na cabeça só deixa tonto; encostar tira vida; a bola volta para o pé; moeda soma pontos; pegar as 5 estrelas leva à Fase 2; H-E-X-A dá vitória; perder as vidas dá derrota, e **JOGAR NOVAMENTE** reinicia; cair no mar volta para o início; o placar marca o gol; o menu tem as instruções e o botão JOGAR funciona; a pausa para o tempo |
+| `Assets/Tests/PlayMode` | Jogando de verdade: o chute rasteiro expulsa e o argentino some; a folha seca atravessa dois e dá DOBLETE; pisar na cabeça só deixa tonto; encostar tira vida; a bola volta para o pé; moeda soma pontos; pegar as 5 estrelas leva à Fase 2; H-E-X-A dá vitória; perder as vidas dá derrota com a tela **DERROTA**, e **REINICIAR** recomeça zerado; os argentinos machucando até as vidas zerarem levam à derrota; H-E-X-A mostra a tela **VITÓRIA** com o botão REINICIAR; dar Play numa fase sem passar pelo menu abre a tela inicial; cair no mar volta para o início; o placar marca o gol; a tela inicial tem COMO JOGAR (todas as teclas), OBJETIVO, COMO GANHAR e COMO PERDER, e o botão JOGAR funciona; a pausa para o tempo |
 
 **Como rodar no Unity:** menu **Window › General › Test Runner** (ou **Rumo ao Hexa › Rodar os testes**), abas *EditMode* e *PlayMode*, botão **Run All**.
 
@@ -103,7 +103,7 @@ Os módulos `com.unity.modules.*` listados em `Packages/manifest.json` (inclusiv
 
 1. Abra a pasta no **Unity Hub** com o editor **6000.5.10f1**.
 2. A cena `Menu` abre automaticamente (ou use o menu **Rumo ao Hexa › Abrir cena Menu**).
-3. Aperte **Play**. Também dá para dar Play direto em `Fase1` ou `Fase2`.
+3. Aperte **Play**. O jogo começa sempre pela tela inicial (mesmo com outra cena aberta). Para testar uma fase direto, sem passar pelo menu, use **Rumo ao Hexa › Testar Fase 1 direto** (ou Fase 2).
 4. Para gerar um executável: *File › Build Profiles*. As 4 cenas já estão na Scene List (Menu, Fase1, Fase2, FimDeJogo).
 
 ## 8. Estrutura do projeto

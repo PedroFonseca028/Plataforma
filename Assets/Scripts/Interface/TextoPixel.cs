@@ -8,6 +8,7 @@ namespace RumoAoHexa
     /// Funciona como um componente de UI comum (herda de MaskableGraphic).
     /// </summary>
     [AddComponentMenu("Rumo ao Hexa/Texto Pixel")]
+    [RequireComponent(typeof(CanvasRenderer))]
     public class TextoPixel : MaskableGraphic
     {
         [SerializeField, TextArea] string texto = "TEXTO";

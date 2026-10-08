@@ -114,6 +114,7 @@ namespace RumoAoHexa
         public void IrParaMenu()
         {
             Time.timeScale = 1f;
+            Sessao.Encerrar();
             Transicao.Carregar(Cenas.Menu);
         }
 

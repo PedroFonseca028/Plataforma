@@ -68,6 +68,10 @@ namespace RumoAoHexa
                     FabricaUI.Texto(raiz, Regras.RotuloItem(fase, i), cimaDir, new Vector2(x, -64f), 1f, FabricaUI.CorTexto,
                         TextAnchor.MiddleCenter, new Vector2(60f, 16f));
             }
+            // o objetivo fica sempre à vista: pegar todos os itens vence a fase
+            string objetivo = fase == 1 ? Textos.Fase1ObjetivoCurto : Textos.Fase2ObjetivoCurto;
+            FabricaUI.Texto(raiz, objetivo, cimaDir, new Vector2(-164f, fase == 1 ? -86f : -62f), 2f, FabricaUI.CorDestaque,
+                TextAnchor.MiddleRight, new Vector2(300f, 24f)).contorno = true;
 
             // bola + barra da folha seca
             iconeBola = FabricaUI.Imagem(raiz, Arte.Sprite("bola_ui"), baixoEsq, new Vector2(40f, 40f), new Vector2(44f, 44f));

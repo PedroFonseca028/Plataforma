@@ -8,7 +8,7 @@ namespace RumoAoHexa.EditorTools
     /// <summary>
     /// Ao abrir o projeto: garante o modo 2D do editor (o jogo é 2D), deixa a
     /// aba Scene em 2D e abre a cena do Menu. Também cria o menu "Rumo ao Hexa"
-    /// na barra do Unity com atalhos para as cenas.
+    /// na barra do Unity com atalhos para as cenas e para testar uma fase direto.
     /// </summary>
     [InitializeOnLoad]
     static class AtalhosRumoAoHexa
@@ -19,6 +19,14 @@ namespace RumoAoHexa.EditorTools
         static AtalhosRumoAoHexa()
         {
             EditorApplication.delayCall += AoAbrirOProjeto;
+            EditorApplication.playModeStateChanged += AoMudarModo;
+        }
+
+        /// <summary>Ao sair do Play, o jogo volta a começar sempre pela tela inicial.</summary>
+        static void AoMudarModo(PlayModeStateChange modo)
+        {
+            if (modo == PlayModeStateChange.EnteredEditMode)
+                SessionState.SetBool(Partida.ChavePularTelaInicial, false);
         }
 
         static void AoAbrirOProjeto()
@@ -63,6 +71,27 @@ namespace RumoAoHexa.EditorTools
 
         [MenuItem("Rumo ao Hexa/Abrir cena Fim de Jogo", false, 4)]
         static void AbrirFim() { Abrir("Assets/Scenes/FimDeJogo.unity"); }
+
+        [MenuItem("Rumo ao Hexa/Testar Fase 1 direto (pula a tela inicial)", false, 10)]
+        static void TestarFase1() { TestarDireto("Assets/Scenes/Fase1.unity"); }
+
+        [MenuItem("Rumo ao Hexa/Testar Fase 2 direto (pula a tela inicial)", false, 11)]
+        static void TestarFase2() { TestarDireto("Assets/Scenes/Fase2.unity"); }
+
+        /// <summary>
+        /// Dar Play numa fase normalmente leva para a tela inicial; este atalho
+        /// abre a fase e dá Play direto nela (só para testes no Editor).
+        /// </summary>
+        static void TestarDireto(string cena)
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                return;
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                return;
+            EditorSceneManager.OpenScene(cena);
+            SessionState.SetBool(Partida.ChavePularTelaInicial, true);
+            EditorApplication.isPlaying = true;
+        }
 
         [MenuItem("Rumo ao Hexa/Editar mapa da Fase 1 (texto)", false, 20)]
         static void MapaFase1() { EditorUtility.OpenWithDefaultApp("Assets/Resources/Fases/Fase1.txt"); }

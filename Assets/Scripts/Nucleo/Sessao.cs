@@ -86,6 +86,12 @@ namespace RumoAoHexa
             Iniciada = true;
         }
 
+        /// <summary>Volta ao menu: a partida acaba (para jogar de novo é preciso apertar JOGAR).</summary>
+        public static void Encerrar()
+        {
+            Iniciada = false;
+        }
+
         /// <summary>Permite dar Play direto em qualquer fase pelo Editor.</summary>
         public static void GarantirIniciada()
         {
