@@ -1,8 +1,8 @@
 using UnityEngine;
 
-namespace Curupira
+namespace RumoAoHexa
 {
-    /// <summary>Plataforma de madeira que vai e volta entre dois pontos (o jogador é levado junto).</summary>
+    /// <summary>Plataforma (prancha de surfe ou travessão) que vai e volta entre dois pontos; o jogador é levado junto.</summary>
     public class PlataformaMovel : MonoBehaviour
     {
         public Vector2 pontoA;
@@ -25,10 +25,16 @@ namespace Curupira
             var col = go.AddComponent<BoxCollider2D>();
             col.size = new Vector2(largura, 0.4f);
             col.offset = new Vector2(0f, 0.3f);
+            // na praia é uma prancha de surfe inteira; no estádio, pedaços de travessão
+            if (largura == 3 && Arte.Existe(tema + "_prancha"))
+            {
+                Efeitos.NovoSprite("Prancha", go.transform, Arte.Sprite(tema + "_prancha"), Ordem.Plataformas);
+                return p;
+            }
             for (int i = 0; i < largura; i++)
             {
                 string tipo = largura == 1 ? "u" : (i == 0 ? "e" : (i == largura - 1 ? "d" : "m"));
-                SpriteRenderer sr = Efeitos.NovoSprite("Tabua", go.transform, Arte.Sprite(tema + "_plataforma_" + tipo), Ordem.Plataformas);
+                SpriteRenderer sr = Efeitos.NovoSprite("Pedaco", go.transform, Arte.Sprite(tema + "_plataforma_" + tipo), Ordem.Plataformas);
                 sr.transform.localPosition = new Vector3(i - (largura - 1) * 0.5f, 0f, 0f);
             }
             return p;

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>
     /// Toca músicas e efeitos sonoros. É criado automaticamente na primeira vez

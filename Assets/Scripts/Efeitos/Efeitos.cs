@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>
     /// Fábrica de efeitos visuais simples: animações de uma vez só (poeira,
@@ -83,8 +83,21 @@ namespace Curupira
         /// <summary>Texto que sobe e some (ex.: "+100").</summary>
         public static void TextoSubindo(string texto, Vector3 posicao, Color cor)
         {
+            Transform t = MontarTexto(texto, posicao, cor, Raiz, Ordem.TextoFlutuante);
+            t.gameObject.AddComponent<TextoFlutuante>();
+        }
+
+        /// <summary>Texto parado no cenário (ex.: o ano embaixo de cada estrela).</summary>
+        public static Transform TextoNoCenario(string texto, Vector3 posicao, Color cor, Transform pai, int ordem)
+        {
+            return MontarTexto(texto, posicao, cor, pai, ordem);
+        }
+
+        /// <summary>Monta um texto com a fonte pixelada usando um sprite por letra (com sombra).</summary>
+        static Transform MontarTexto(string texto, Vector3 posicao, Color cor, Transform pai, int ordem)
+        {
             var go = new GameObject("texto_" + texto);
-            go.transform.SetParent(Raiz, false);
+            go.transform.SetParent(pai, false);
             go.transform.position = posicao;
             float largura = FontePixel.LarguraLinha(texto) / Arte.PixelsPorUnidade;
             float x = -largura * 0.5f;
@@ -99,16 +112,26 @@ namespace Curupira
                 Sprite s = FontePixel.SpriteDoGlifo(c);
                 if (s == null)
                     continue;
-                // sombra + letra
-                SpriteRenderer sombra = NovoSprite("s", go.transform, s, Ordem.TextoFlutuante, true);
-                sombra.color = new Color(0.1f, 0.05f, 0.1f, 0.85f);
+                SpriteRenderer sombra = NovoSprite("s", go.transform, s, ordem, true);
+                sombra.color = new Color(0.1f, 0.05f, 0.1f, 0.85f * cor.a);
                 sombra.transform.localPosition = new Vector3(x + 1f / 16f, -1f / 16f - 0.3f, 0f);
-                SpriteRenderer letra = NovoSprite("l", go.transform, s, Ordem.TextoFlutuante + 1, true);
+                SpriteRenderer letra = NovoSprite("l", go.transform, s, ordem + 1, true);
                 letra.color = cor;
                 letra.transform.localPosition = new Vector3(x, -0.3f, 0f);
                 x += (s.rect.width + 1f) / Arte.PixelsPorUnidade;
             }
-            go.AddComponent<TextoFlutuante>();
+            return go.transform;
+        }
+
+        /// <summary>Chuva de confete verde e amarelo (vitória e gols).</summary>
+        public static void Confete(Vector3 posicao, int quantidade)
+        {
+            Color[] cores =
+            {
+                new Color(1f, 0.82f, 0.12f), new Color(0.12f, 0.62f, 0.28f), new Color(0.15f, 0.34f, 0.79f), Color.white,
+            };
+            for (int i = 0; i < quantidade; i++)
+                Particulas("confete", posicao, 1, cores[i % cores.Length], 3f, 8f, 1.6f, 6f, true, 50f, 130f);
         }
     }
 }

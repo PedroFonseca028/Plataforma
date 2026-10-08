@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>
     /// Biblioteca de sprites do jogo. Lê o arquivo Resources/Sprites/manifest.json
@@ -11,7 +11,7 @@ namespace Curupira
     /// folhas PNG, com o pivô e os 16 pixels por unidade corretos.
     ///
     /// Nomes terminados em _0, _1, _2... formam uma animação:
-    /// Arte.Anim("curupira_correr") devolve todos os quadros em ordem.
+    /// Arte.Anim("craque_correr") devolve todos os quadros em ordem.
     /// </summary>
     public static class Arte
     {
@@ -71,7 +71,7 @@ namespace Curupira
             TextAsset texto = Resources.Load<TextAsset>("Sprites/manifest");
             if (texto == null)
             {
-                Debug.LogError("[Curupira] Não encontrei Resources/Sprites/manifest.json. Rode Ferramentas/gerar_arte.py.");
+                Debug.LogError("[RumoAoHexa] Não encontrei Resources/Sprites/manifest.json. Rode Ferramentas/gerar_arte.py.");
                 return;
             }
 
@@ -84,7 +84,7 @@ namespace Curupira
                 Texture2D textura = Resources.Load<Texture2D>("Sprites/" + folha.folha);
                 if (textura == null)
                 {
-                    Debug.LogError("[Curupira] Textura não encontrada: Resources/Sprites/" + folha.folha);
+                    Debug.LogError("[RumoAoHexa] Textura não encontrada: Resources/Sprites/" + folha.folha);
                     continue;
                 }
 
@@ -135,7 +135,7 @@ namespace Curupira
             Sprite s;
             if (sprites.TryGetValue(nome, out s))
                 return s;
-            Debug.LogWarning("[Curupira] Sprite não encontrado: " + nome);
+            Debug.LogWarning("[RumoAoHexa] Sprite não encontrado: " + nome);
             return null;
         }
 
@@ -145,7 +145,7 @@ namespace Curupira
             return sprites.ContainsKey(nome);
         }
 
-        /// <summary>Quadros de uma animação ("curupira_correr" -> curupira_correr_0..5).</summary>
+        /// <summary>Quadros de uma animação ("craque_correr" -> craque_correr_0..5).</summary>
         public static Sprite[] Anim(string prefixo)
         {
             GarantirCarregado();
@@ -155,7 +155,7 @@ namespace Curupira
             Sprite unico;
             if (sprites.TryGetValue(prefixo, out unico))
                 return new[] { unico };
-            Debug.LogWarning("[Curupira] Animação não encontrada: " + prefixo);
+            Debug.LogWarning("[RumoAoHexa] Animação não encontrada: " + prefixo);
             return Vazio;
         }
 

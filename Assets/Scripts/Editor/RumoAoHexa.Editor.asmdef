@@ -1,0 +1,18 @@
+{
+    "name": "RumoAoHexa.Editor",
+    "rootNamespace": "RumoAoHexa.EditorTools",
+    "references": [
+        "RumoAoHexa"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>Menu de pausa (Esc / P / Start).</summary>
     public class MenuPausa : MonoBehaviour

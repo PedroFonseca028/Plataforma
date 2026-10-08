@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>
-    /// Regras da fase: conta as sementes, soma pontos, controla vidas,
-    /// checkpoints, pausa e decide vitória ou derrota.
+    /// Regras da fase: conta os itens obrigatórios, soma pontos e combos,
+    /// controla vidas, bandeirinhas, placar, pausa e decide vitória ou derrota.
     /// </summary>
     public class GerenciadorFase : MonoBehaviour
     {
@@ -19,54 +19,62 @@ namespace Curupira
             Instancia = null;
         }
 
-        public const int PontosSemente = 100;
-        public const int BonusFase = 500;
-
-        public int TotalSementes { get; private set; }
-        public int SementesColetadas { get; private set; }
+        /// <summary>Abaixo disso o jogador (ou a bola) caiu do mapa.</summary>
         public float LimiteQueda
         {
             get { return -3f; }
         }
+        public int TotalItens { get; private set; }
+        public int ItensColetados { get; private set; }
+        public int NumeroFase { get; private set; }
+        public Tema Tema { get; private set; }
+        public PlacarFase Placar { get; private set; }
         public bool Terminou
         {
             get { return terminou; }
         }
+        public Jogador Jogador
+        {
+            get { return jogador; }
+        }
+        /// <summary>Estrelas (fase 1) ou letras (fase 2) da fase, na ordem do mapa.</summary>
+        public IReadOnlyList<Coletavel> ItensObrigatorios
+        {
+            get { return itens; }
+        }
 
-        ConstrutorFase construtor;
         Jogador jogador;
         Vector3 pontoRenascer;
-        List<Coletavel> sementes;
+        List<Coletavel> itens;
         string proximaCena;
-        int numeroFase;
-        Tema tema;
         Hud hud;
         MenuPausa pausa;
         SpriteRenderer seta;
         bool terminou;
+        int sorteioNarrador;
 
-        public void Iniciar(ConstrutorFase c, Jogador j, Vector3 inicio, List<Coletavel> listaSementes, int fase,
-            string nome, string proxima, Tema t)
+        public void Iniciar(Jogador j, Vector3 inicio, List<Coletavel> itensObrigatorios, int fase, string nome,
+            string objetivo, string proxima, Tema t)
         {
             Instancia = this;
-            construtor = c;
             jogador = j;
             pontoRenascer = inicio;
-            sementes = listaSementes;
-            TotalSementes = listaSementes.Count;
+            itens = itensObrigatorios;
+            TotalItens = itensObrigatorios.Count;
             proximaCena = proxima;
-            numeroFase = fase;
-            tema = t;
+            NumeroFase = fase;
+            Tema = t;
+            Placar = new PlacarFase();
 
             FabricaUI.GarantirEventSystem();
-            hud = Hud.Criar(TotalSementes);
-            hud.Banner(nome, "RECUPERE AS " + TotalSementes + " SEMENTES ENCANTADAS!");
+            hud = Hud.Criar(fase, TotalItens);
+            hud.Banner(nome, objetivo);
             pausa = MenuPausa.Criar(this);
 
-            seta = Efeitos.NovoSprite("Seta da semente", null, Arte.Sprite("seta"), Ordem.TextoFlutuante, true);
+            seta = Efeitos.NovoSprite("Seta do item", null, Arte.Sprite("seta"), Ordem.TextoFlutuante, true);
             seta.enabled = false;
 
-            SomJogo.Musica(tema == Tema.Mata ? Trilha.Fase1 : Trilha.Fase2);
+            SomJogo.Musica(t == Tema.Praia ? Trilha.Fase1 : Trilha.Fase2);
             Transicao.AoEntrarNaCena();
         }
 
@@ -84,7 +92,7 @@ namespace Curupira
             if (!terminou && !Transicao.Carregando && Entrada.PausaApertada)
                 AlternarPausa();
             if (jogador != null && hud != null)
-                hud.Atualizar(SementesColetadas, jogador.RecargaRestante / Jogador.RecargaAssobio);
+                hud.Atualizar(ItensColetados, jogador.CargaChute, jogador.Bola != null && jogador.Bola.NoPe);
             AtualizarSeta();
         }
 
@@ -109,7 +117,7 @@ namespace Curupira
             Transicao.Carregar(Cenas.Menu);
         }
 
-        /// <summary>A setinha dourada aponta para a semente mais próxima quando ela está longe.</summary>
+        /// <summary>A setinha amarela aponta para o item obrigatório mais próximo quando ele está longe.</summary>
         void AtualizarSeta()
         {
             if (seta == null || jogador == null)
@@ -117,7 +125,7 @@ namespace Curupira
             Coletavel maisPerto = null;
             float melhor = float.MaxValue;
             Vector3 p = jogador.transform.position + Vector3.up * 0.8f;
-            foreach (Coletavel s in sementes)
+            foreach (Coletavel s in itens)
             {
                 if (s == null || s.Coletado)
                     continue;
@@ -143,44 +151,37 @@ namespace Curupira
         public void ItemColetado(Coletavel item)
         {
             Vector3 pos = item.transform.position;
+            EstadoPartida e = Sessao.Estado;
             switch (item.tipo)
             {
-                case TipoColetavel.Semente:
-                    SementesColetadas++;
-                    Sessao.SementesColetadas++;
-                    Sessao.SomarPontos(PontosSemente);
-                    SomJogo.Tocar(Som.Semente);
+                case TipoColetavel.ItemObrigatorio:
+                    ItensColetados++;
+                    e.ColetarItemObrigatorio();
+                    SomJogo.Tocar(Som.ItemObrigatorio);
                     Efeitos.Particulas("brilho", pos, 10, new Color(1f, 0.9f, 0.4f), 2f, 5f, 0.7f, 2f, true);
-                    Efeitos.TextoSubindo("+" + PontosSemente, pos + Vector3.up * 0.6f, FabricaUI.CorDestaque);
-                    Efeitos.Animacao("broto", new Vector3(pos.x, Mathf.Floor(pos.y) + 0.5f, 0f), 6f, 1f, false, Ordem.Decoracao + 1);
-                    StartCoroutine(construtor.Renascer(pos, tema == Tema.Queimada ? 5.5f : 3.5f));
-                    if (tema == Tema.Queimada)
-                        SomJogo.Tocar(Som.Renascer, 0.6f);
-                    int faltam = TotalSementes - SementesColetadas;
+                    Efeitos.Confete(pos, 14);
+                    Efeitos.TextoSubindo("+" + Regras.PontosItemObrigatorio, pos + Vector3.up * 0.6f, FabricaUI.CorDestaque);
+                    hud.MarcarItem(item.indice);
+                    int faltam = TotalItens - ItensColetados;
+                    Mensagem(Narrador.FraseItem(NumeroFase, item.rotulo, faltam), FabricaUI.CorDestaque, 1.8f);
                     if (faltam <= 0)
                         StartCoroutine(Vitoria());
-                    else
-                        Mensagem(faltam == 1 ? "FALTA 1 SEMENTE!" : "FALTAM " + faltam + " SEMENTES", FabricaUI.CorDestaque, 1.4f);
                     break;
-                case TipoColetavel.Acai:
-                    Pontuar(10, pos, Som.Acai);
-                    break;
-                case TipoColetavel.Caju:
-                    Pontuar(25, pos, Som.Fruta);
-                    break;
-                case TipoColetavel.Guarana:
-                    Pontuar(50, pos, Som.Fruta);
+                case TipoColetavel.Moeda:
+                    e.ColetarMoeda();
+                    SomJogo.Tocar(Som.Moeda, 0.7f);
+                    Efeitos.Animacao("brilho", pos, 16f, 0.8f, true);
                     break;
                 case TipoColetavel.Coracao:
-                    if (Sessao.Vidas < Sessao.VidasMaximas)
+                    if (e.ColetarCoracao())
                     {
-                        Sessao.Vidas++;
-                        Mensagem("+1 VIDA!", FabricaUI.CorVermelha, 1.2f);
+                        Mensagem(Textos.MaisUmaVida, FabricaUI.CorVermelha, 1.2f);
                         SomJogo.Tocar(Som.Vida);
                     }
                     else
                     {
-                        Pontuar(200, pos, Som.Vida);
+                        SomJogo.Tocar(Som.Vida, 0.6f);
+                        Efeitos.TextoSubindo("+" + Regras.PontosCoracaoExtra, pos + Vector3.up * 0.5f, Color.white);
                     }
                     Efeitos.Particulas("brilho", pos, 8, FabricaUI.CorVermelha, 2f, 4f, 0.6f, 2f, true);
                     break;
@@ -188,18 +189,42 @@ namespace Curupira
             hud.AtualizarTudo();
         }
 
-        void Pontuar(int valor, Vector3 pos, Som som)
+        /// <summary>
+        /// A bola expulsou um argentino. <paramref name="acertos"/> é quantos a mesma bola já
+        /// expulsou (2 = doblete...) e <paramref name="bonusCombo"/> o bônus a somar agora.
+        /// </summary>
+        public void ArgentinoExpulso(Inimigo ini, TipoChute tipo, int acertos, int bonusCombo)
         {
-            Sessao.SomarPontos(valor);
-            SomJogo.Tocar(som, 0.8f);
-            Efeitos.Animacao("brilho", pos, 16f, 0.8f, true);
-            Efeitos.TextoSubindo("+" + valor, pos + Vector3.up * 0.5f, Color.white);
+            EstadoPartida e = Sessao.Estado;
+            e.RegistrarExpulsao();
+            Placar.GolBrasil();
+            Vector3 pos = (Vector3)ini.Centro + Vector3.up * (ini.Altura * 0.5f + 1.4f);
+            Efeitos.TextoSubindo("+" + Regras.PontosExpulsao, pos, Color.white);
+            if (bonusCombo > 0)
+            {
+                e.SomarPontos(bonusCombo);
+                Mensagem(Regras.NomeCombo(acertos) + "  +" + Regras.BonusCombo(acertos), FabricaUI.CorDestaque, 1.6f);
+                SomJogo.Tocar(Som.Combo);
+                Efeitos.Confete(pos, 10);
+            }
+            else if (acertos <= 1)
+            {
+                Mensagem(Narrador.FraseExpulsao(tipo, sorteioNarrador++, Tema == Tema.Estadio), FabricaUI.CorVerde, 1.2f);
+            }
+            if (Tema == Tema.Estadio)
+                Efeitos.Confete(pos, 6);
+            hud.AtualizarTudo();
         }
 
-        public void CheckpointAtivado(Totem t)
+        public void ArgentinoAtordoado(Inimigo ini)
         {
-            pontoRenascer = t.transform.position + new Vector3(0.9f, 0f, 0f);
-            Mensagem("TOTEM ATIVADO!", FabricaUI.CorVerde, 1.2f);
+            Efeitos.TextoSubindo(Textos.Tonto, (Vector3)ini.Centro + Vector3.up * (ini.Altura * 0.5f + 1.2f), FabricaUI.CorTexto);
+        }
+
+        public void BandeirinhaAtivada(Bandeirinha b)
+        {
+            pontoRenascer = b.transform.position + new Vector3(0.9f, 0f, 0f);
+            Mensagem(Textos.BandeirinhaAtivada, FabricaUI.CorVerde, 1.2f);
         }
 
         public void Mensagem(string texto, Color cor, float duracao)
@@ -212,37 +237,40 @@ namespace Curupira
         {
             if (terminou)
                 return;
-            Sessao.Vidas--;
-            hud.AtualizarTudo();
-            hud.PiscarVidas();
-            if (Sessao.Vidas <= 0)
-                StartCoroutine(Derrota());
+            PerderVida();
         }
 
         public void JogadorCaiuNoAbismo()
         {
             if (terminou || jogador == null || !jogador.Vivo)
                 return;
-            Sessao.Vidas--;
-            hud.AtualizarTudo();
-            hud.PiscarVidas();
             SomJogo.Tocar(Som.Queda);
-            if (Sessao.Vidas <= 0)
-                StartCoroutine(Derrota());
-            else
+            if (!PerderVida())
             {
                 jogador.Renascer(pontoRenascer);
-                Mensagem("CUIDADO!", FabricaUI.CorVermelha, 1f);
+                Mensagem(Textos.Cuidado, FabricaUI.CorVermelha, 1f);
             }
+        }
+
+        /// <summary>Tira uma vida (vira gol da Argentina no placar). Devolve true se acabou o jogo.</summary>
+        bool PerderVida()
+        {
+            bool acabou = Sessao.Estado.PerderVida();
+            Placar.GolArgentina();
+            hud.AtualizarTudo();
+            hud.PiscarVidas();
+            if (acabou)
+                StartCoroutine(Derrota());
+            return acabou;
         }
 
         IEnumerator Derrota()
         {
             terminou = true;
-            Sessao.Vidas = 0;
+            Sessao.Estado.ZerarVidas();
             jogador.Morrer();
             SomJogo.Musica(Trilha.Nenhuma);
-            Mensagem("AS MÁQUINAS VENCERAM...", FabricaUI.CorVermelha, 3f);
+            Mensagem(Textos.PerdeuTudo, FabricaUI.CorVermelha, 3f);
             yield return new WaitForSeconds(2f);
             Sessao.Finalizar(ResultadoJogo.Derrota);
             Transicao.Carregar(Cenas.FimDeJogo);
@@ -253,11 +281,16 @@ namespace Curupira
             terminou = true;
             jogador.Comemorar();
             SomJogo.Musica(Trilha.Vitoria, false);
-            Sessao.SomarPontos(BonusFase);
-            Mensagem("A MATA AGRADECE!  +" + BonusFase, FabricaUI.CorVerde, 3.5f);
-            StartCoroutine(construtor.RenascerTudo(jogador.transform.position));
-            yield return new WaitForSeconds(3.5f);
-            if (!string.IsNullOrEmpty(proximaCena))
+            Sessao.Estado.BonusDeFase();
+            bool ultima = string.IsNullOrEmpty(proximaCena);
+            Mensagem((ultima ? Textos.EHexa : Textos.FaseConcluida) + "  +" + Regras.BonusFase, FabricaUI.CorVerde, 3.5f);
+            for (int i = 0; i < 6; i++)
+            {
+                Efeitos.Confete(jogador.transform.position + new Vector3(Random.Range(-6f, 6f), 7f, 0f), 18);
+                yield return new WaitForSeconds(0.45f);
+            }
+            yield return new WaitForSeconds(0.8f);
+            if (!ultima)
             {
                 Transicao.Carregar(proximaCena);
             }

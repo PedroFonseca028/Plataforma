@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>
     /// Deixa o botão "vivo": cresce um pouco quando está selecionado ou com o

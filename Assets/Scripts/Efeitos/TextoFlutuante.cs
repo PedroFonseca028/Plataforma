@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>Faz um texto do cenário subir e desaparecer.</summary>
     public class TextoFlutuante : MonoBehaviour

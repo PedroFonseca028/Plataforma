@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>Faz o chão do menu rolar para a esquerda sem fim (dá a impressão de corrida).</summary>
     public class RolarChao : MonoBehaviour

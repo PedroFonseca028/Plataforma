@@ -2,31 +2,39 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace Curupira
+namespace RumoAoHexa
 {
-    /// <summary>Informações na tela durante a fase: vidas, pontos, sementes e assobio.</summary>
+    /// <summary>
+    /// Informações na tela durante a fase: vidas, pontos, moedas, os itens
+    /// obrigatórios (estrelas ou letras H-E-X-A) e a barra da folha seca.
+    /// </summary>
     public class Hud : MonoBehaviour
     {
         Image[] coracoes;
         TextoPixel pontos;
-        TextoPixel sementes;
-        Image recargaAssobio;
-        Image iconeAssobio;
+        TextoPixel moedas;
+        Image[] slots;
+        float[] pulsoSlot;
+        Image iconeBola;
+        Image fundoBarra;
+        Image barraCarga;
         TextoPixel titulo;
         TextoPixel subtitulo;
         TextoPixel mensagem;
+        int fase;
         int total;
-        int ultimasSementes = -1;
         int ultimosPontos = -1;
         int ultimasVidas = -1;
+        int ultimasMoedas = -1;
         Coroutine rotinaMensagem;
         float piscar;
 
-        public static Hud Criar(int totalSementes)
+        public static Hud Criar(int fase, int totalItens)
         {
             Canvas canvas = FabricaUI.CriarCanvas("HUD", 10);
             var hud = canvas.gameObject.AddComponent<Hud>();
-            hud.total = totalSementes;
+            hud.fase = fase;
+            hud.total = totalItens;
             hud.Montar(canvas.transform);
             return hud;
         }
@@ -38,23 +46,41 @@ namespace Curupira
             Vector2 baixoEsq = new Vector2(0f, 0f);
             Vector2 centro = new Vector2(0.5f, 0.5f);
 
-            coracoes = new Image[Sessao.VidasMaximas];
+            coracoes = new Image[Regras.VidasMaximas];
             for (int i = 0; i < coracoes.Length; i++)
                 coracoes[i] = FabricaUI.Imagem(raiz, Arte.Sprite("ui_coracao_cheio"), cimaEsq, new Vector2(34f + i * 36f, -32f), new Vector2(32f, 32f));
 
-            pontos = FabricaUI.Texto(raiz, "PONTOS 0", cimaEsq, new Vector2(218f, -72f), 2f, FabricaUI.CorTexto, TextAnchor.MiddleLeft, new Vector2(400f, 30f));
+            pontos = FabricaUI.Texto(raiz, "PONTOS 0", cimaEsq, new Vector2(218f, -70f), 2f, FabricaUI.CorTexto, TextAnchor.MiddleLeft, new Vector2(400f, 30f));
+            FabricaUI.Imagem(raiz, Arte.Sprite("moeda_0"), cimaEsq, new Vector2(34f, -100f), new Vector2(24f, 24f));
+            moedas = FabricaUI.Texto(raiz, "X 0", cimaEsq, new Vector2(252f, -100f), 2f, FabricaUI.CorDestaque, TextAnchor.MiddleLeft, new Vector2(400f, 30f));
 
-            FabricaUI.Imagem(raiz, Arte.Sprite("ui_semente"), cimaDir, new Vector2(-150f, -34f), new Vector2(32f, 32f));
-            sementes = FabricaUI.Texto(raiz, "0/0", cimaDir, new Vector2(-70f, -34f), 3f, FabricaUI.CorDestaque, TextAnchor.MiddleLeft, new Vector2(120f, 40f));
-            sementes.rectTransform.anchoredPosition = new Vector2(-66f, -34f);
+            // itens obrigatórios: começam apagados e acendem quando são pegos
+            slots = new Image[total];
+            pulsoSlot = new float[total];
+            float passo = fase == 1 ? 42f : 40f;
+            for (int i = 0; i < total; i++)
+            {
+                string sprite = fase == 1 ? "estrela_0" : "letra_" + Regras.RotuloItem(fase, i).ToLowerInvariant() + "_0";
+                float x = -30f - (total - 1 - i) * passo;
+                slots[i] = FabricaUI.Imagem(raiz, Arte.Sprite(sprite), cimaDir, new Vector2(x, -34f), new Vector2(32f, 32f),
+                    new Color(0.25f, 0.27f, 0.35f, 0.75f));
+                if (fase == 1)
+                    FabricaUI.Texto(raiz, Regras.RotuloItem(fase, i), cimaDir, new Vector2(x, -64f), 1f, FabricaUI.CorTexto,
+                        TextAnchor.MiddleCenter, new Vector2(60f, 16f));
+            }
 
-            iconeAssobio = FabricaUI.Imagem(raiz, Arte.Sprite("ui_assobio"), baixoEsq, new Vector2(40f, 40f), new Vector2(48f, 48f));
-            recargaAssobio = FabricaUI.Imagem(raiz, Arte.Sprite("ui_branco"), baixoEsq, new Vector2(40f, 40f), new Vector2(48f, 48f),
-                new Color(0.05f, 0.03f, 0.08f, 0.7f));
-            recargaAssobio.type = Image.Type.Filled;
-            recargaAssobio.fillMethod = Image.FillMethod.Vertical;
-            recargaAssobio.fillOrigin = (int)Image.OriginVertical.Top;
-            FabricaUI.Texto(raiz, "J / X: ASSOBIO", baixoEsq, new Vector2(170f, 40f), 2f, new Color(1f, 1f, 1f, 0.8f), TextAnchor.MiddleLeft, new Vector2(200f, 30f));
+            // bola + barra da folha seca
+            iconeBola = FabricaUI.Imagem(raiz, Arte.Sprite("bola_ui"), baixoEsq, new Vector2(40f, 40f), new Vector2(44f, 44f));
+            fundoBarra = FabricaUI.Imagem(raiz, Arte.Sprite("ui_branco"), baixoEsq, new Vector2(118f, 40f), new Vector2(104f, 16f),
+                new Color(0.05f, 0.05f, 0.12f, 0.75f));
+            barraCarga = FabricaUI.Imagem(raiz, Arte.Sprite("ui_branco"), baixoEsq, new Vector2(118f, 40f), new Vector2(100f, 12f),
+                FabricaUI.CorDestaque);
+            barraCarga.type = Image.Type.Filled;
+            barraCarga.fillMethod = Image.FillMethod.Horizontal;
+            barraCarga.fillOrigin = (int)Image.OriginHorizontal.Left;
+            barraCarga.fillAmount = 0f;
+            FabricaUI.Texto(raiz, Textos.HudControles, baixoEsq, new Vector2(186f, 40f), 2f, new Color(1f, 1f, 1f, 0.8f),
+                TextAnchor.MiddleLeft, new Vector2(760f, 30f)).rectTransform.pivot = new Vector2(0f, 0.5f);
 
             titulo = FabricaUI.Texto(raiz, "", centro, new Vector2(0f, 150f), 4f, FabricaUI.CorDestaque);
             titulo.contorno = true;
@@ -67,34 +93,49 @@ namespace Curupira
 
         public void AtualizarTudo()
         {
-            ultimasSementes = -1;
             ultimosPontos = -1;
             ultimasVidas = -1;
+            ultimasMoedas = -1;
         }
 
-        public void Atualizar(int coletadas, float recargaFracao)
+        /// <param name="carga">Barra da folha seca (0 a 1).</param>
+        /// <param name="bolaNoPe">Com a bola longe, o ícone fica apagado.</param>
+        public void Atualizar(int coletados, float carga, bool bolaNoPe)
         {
-            if (coletadas != ultimasSementes)
-            {
-                ultimasSementes = coletadas;
-                sementes.Texto = coletadas + "/" + total;
-            }
             if (Sessao.Pontos != ultimosPontos)
             {
                 ultimosPontos = Sessao.Pontos;
                 pontos.Texto = "PONTOS " + Sessao.Pontos.ToString("000000");
+            }
+            if (Sessao.Moedas != ultimasMoedas)
+            {
+                ultimasMoedas = Sessao.Moedas;
+                moedas.Texto = "X " + Sessao.Moedas;
             }
             if (Sessao.Vidas != ultimasVidas)
             {
                 ultimasVidas = Sessao.Vidas;
                 for (int i = 0; i < coracoes.Length; i++)
                 {
-                    coracoes[i].gameObject.SetActive(i < Mathf.Max(Sessao.VidasIniciais, Sessao.Vidas));
+                    coracoes[i].gameObject.SetActive(i < Mathf.Max(Regras.VidasIniciais, Sessao.Vidas));
                     coracoes[i].sprite = Arte.Sprite(i < Sessao.Vidas ? "ui_coracao_cheio" : "ui_coracao_vazio");
                 }
             }
-            recargaAssobio.fillAmount = Mathf.Clamp01(recargaFracao);
-            iconeAssobio.color = recargaFracao <= 0f ? Color.white : new Color(1f, 1f, 1f, 0.6f);
+
+            barraCarga.fillAmount = Mathf.Clamp01(carga);
+            bool cheia = carga >= 1f;
+            barraCarga.color = cheia && Mathf.Repeat(Time.unscaledTime * 8f, 1f) < 0.5f ? Color.white : FabricaUI.CorDestaque;
+            iconeBola.color = bolaNoPe ? Color.white : new Color(1f, 1f, 1f, 0.35f);
+            iconeBola.rectTransform.localRotation = Quaternion.Euler(0f, 0f, bolaNoPe ? 0f : -Time.unscaledTime * 360f);
+
+            for (int i = 0; i < slots.Length; i++)
+            {
+                if (pulsoSlot[i] <= 0f)
+                    continue;
+                pulsoSlot[i] -= Time.unscaledDeltaTime;
+                float s = 1f + Mathf.Max(0f, pulsoSlot[i]) * 1.2f;
+                slots[i].rectTransform.localScale = new Vector3(s, s, 1f);
+            }
 
             if (piscar > 0f)
             {
@@ -103,6 +144,20 @@ namespace Curupira
                 for (int i = 0; i < coracoes.Length; i++)
                     coracoes[i].rectTransform.localScale = new Vector3(s, s, 1f);
             }
+        }
+
+        /// <summary>Acende o item pego no canto da tela.</summary>
+        public void MarcarItem(int indice)
+        {
+            if (indice < 0 || indice >= slots.Length)
+                return;
+            slots[indice].color = Color.white;
+            pulsoSlot[indice] = 0.5f;
+        }
+
+        public bool ItemMarcado(int indice)
+        {
+            return indice >= 0 && indice < slots.Length && slots[indice].color == Color.white;
         }
 
         public void PiscarVidas()

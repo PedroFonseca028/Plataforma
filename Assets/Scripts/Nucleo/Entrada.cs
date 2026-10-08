@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 #endif
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>
     /// Leitura dos controles (teclado e gamepad) usando o Input System.
@@ -39,6 +39,22 @@ namespace Curupira
             }
         }
 
+        /// <summary>↑ ou W segurado (mira para cima: o chute vira cavadinha).</summary>
+        public static bool CimaSegurado
+        {
+            get
+            {
+#if ENABLE_INPUT_SYSTEM
+                Keyboard kb = Keyboard.current;
+                Gamepad gp = Gamepad.current;
+                return (kb != null && (kb.wKey.isPressed || kb.upArrowKey.isPressed)) ||
+                       (gp != null && (gp.dpad.up.isPressed || gp.leftStick.ReadValue().y > 0.6f));
+#else
+                return Input.GetAxisRaw("Vertical") > 0.5f;
+#endif
+            }
+        }
+
         public static bool BaixoSegurado
         {
             get
@@ -54,6 +70,7 @@ namespace Curupira
             }
         }
 
+        /// <summary>Espaço ou Z (↑ fica livre para mirar a cavadinha).</summary>
         public static bool PuloApertado
         {
             get
@@ -61,8 +78,7 @@ namespace Curupira
 #if ENABLE_INPUT_SYSTEM
                 Keyboard kb = Keyboard.current;
                 Gamepad gp = Gamepad.current;
-                return (kb != null && (kb.spaceKey.wasPressedThisFrame || kb.wKey.wasPressedThisFrame ||
-                                       kb.upArrowKey.wasPressedThisFrame || kb.zKey.wasPressedThisFrame)) ||
+                return (kb != null && (kb.spaceKey.wasPressedThisFrame || kb.zKey.wasPressedThisFrame)) ||
                        (gp != null && gp.buttonSouth.wasPressedThisFrame);
 #else
                 return Input.GetButtonDown("Jump");
@@ -77,8 +93,7 @@ namespace Curupira
 #if ENABLE_INPUT_SYSTEM
                 Keyboard kb = Keyboard.current;
                 Gamepad gp = Gamepad.current;
-                return (kb != null && (kb.spaceKey.isPressed || kb.wKey.isPressed ||
-                                       kb.upArrowKey.isPressed || kb.zKey.isPressed)) ||
+                return (kb != null && (kb.spaceKey.isPressed || kb.zKey.isPressed)) ||
                        (gp != null && gp.buttonSouth.isPressed);
 #else
                 return Input.GetButton("Jump");
@@ -86,19 +101,49 @@ namespace Curupira
             }
         }
 
-        /// <summary>Assobio do Curupira (deixa as máquinas tontas).</summary>
-        public static bool AssobioApertado
+        /// <summary>J ou X: chute (segurar carrega a folha seca).</summary>
+        public static bool ChuteApertado
         {
             get
             {
 #if ENABLE_INPUT_SYSTEM
                 Keyboard kb = Keyboard.current;
                 Gamepad gp = Gamepad.current;
-                return (kb != null && (kb.jKey.wasPressedThisFrame || kb.xKey.wasPressedThisFrame ||
-                                       kb.kKey.wasPressedThisFrame || kb.leftShiftKey.wasPressedThisFrame)) ||
-                       (gp != null && (gp.buttonWest.wasPressedThisFrame || gp.buttonNorth.wasPressedThisFrame));
+                return (kb != null && (kb.jKey.wasPressedThisFrame || kb.xKey.wasPressedThisFrame)) ||
+                       (gp != null && gp.buttonWest.wasPressedThisFrame);
 #else
                 return Input.GetButtonDown("Fire1");
+#endif
+            }
+        }
+
+        public static bool ChuteSegurado
+        {
+            get
+            {
+#if ENABLE_INPUT_SYSTEM
+                Keyboard kb = Keyboard.current;
+                Gamepad gp = Gamepad.current;
+                return (kb != null && (kb.jKey.isPressed || kb.xKey.isPressed)) ||
+                       (gp != null && gp.buttonWest.isPressed);
+#else
+                return Input.GetButton("Fire1");
+#endif
+            }
+        }
+
+        /// <summary>K ou C: cavadinha direto (atalho para ↑ + J).</summary>
+        public static bool CavadinhaApertada
+        {
+            get
+            {
+#if ENABLE_INPUT_SYSTEM
+                Keyboard kb = Keyboard.current;
+                Gamepad gp = Gamepad.current;
+                return (kb != null && (kb.kKey.wasPressedThisFrame || kb.cKey.wasPressedThisFrame)) ||
+                       (gp != null && gp.buttonNorth.wasPressedThisFrame);
+#else
+                return Input.GetButtonDown("Fire2");
 #endif
             }
         }

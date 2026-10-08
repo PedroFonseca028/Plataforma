@@ -1,10 +1,11 @@
 using UnityEngine;
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>
-    /// O Curupira: movimento, pulo (com "coyote time" e buffer), pisão nos
-    /// inimigos, assobio mágico, dano e pegadas viradas para trás.
+    /// O craque canarinho: movimento, pulo (com "coyote time" e buffer), chutes
+    /// (rasteiro, cavadinha e folha seca carregada), embaixadinha quando está
+    /// parado, pisão que deixa o argentino tonto e dano.
     /// </summary>
     public class Jogador : MonoBehaviour
     {
@@ -28,16 +29,18 @@ namespace Curupira
         const float TempoBuffer = 0.12f;
         const float ForcaQuique = 14f;
 
-        // ---- assobio
-        public const float RecargaAssobio = 4f;
-        const float RaioAssobio = 4.5f;
-        const float TempoTonto = 3.5f;
+        // ---- chute e embaixadinha
+        const float TempoAnimChute = 0.28f;
+        const float EsperaEmbaixadinha = 0.6f;
+        /// <summary>Duração de um ciclo da embaixadinha (a bola sobe e volta ao pé).</summary>
+        public const float CicloEmbaixadinha = 0.6f;
 
         Rigidbody2D rb;
         BoxCollider2D col;
         SpriteRenderer sr;
         AnimadorSprite anim;
         Transform visual;
+        readonly ControleChute controle = new ControleChute();
 
         float entradaH;
         float timerCoyote;
@@ -47,14 +50,16 @@ namespace Curupira
         bool olhandoDireita = true;
         float timerInvulneravel;
         float timerSemControle;
-        float timerAssobioAnim;
-        float timerPegada;
+        float timerAnimChute;
         float timerDescer;
+        float tempoParado;
+        bool avisouCargaCheia;
         Collider2D plataformaIgnorada;
         PlataformaMovel plataformaMovel;
         bool comemorando;
         float yAntes;
 
+        public Bola Bola { get; private set; }
         public bool Vivo { get; private set; }
         public bool NoChao
         {
@@ -64,18 +69,56 @@ namespace Curupira
         {
             get { return rb != null ? rb.linearVelocity.y : 0f; }
         }
-        public float RecargaRestante { get; private set; }
+        public float VelocidadeX
+        {
+            get { return rb != null ? rb.linearVelocity.x : 0f; }
+        }
+        /// <summary>1 olhando para a direita, -1 para a esquerda.</summary>
+        public int Direcao
+        {
+            get { return olhandoDireita ? 1 : -1; }
+        }
         public bool Invulneravel
         {
             get { return timerInvulneravel > 0f; }
         }
+        public bool Comemorando
+        {
+            get { return comemorando; }
+        }
+        /// <summary>0 a 1: barra da folha seca (para o HUD).</summary>
+        public float CargaChute
+        {
+            get { return controle.Carga; }
+        }
+        public bool CarregandoChute
+        {
+            get { return controle.Carregando; }
+        }
+        /// <summary>Parado com a bola no pé: faz embaixadinhas.</summary>
+        public bool FazendoEmbaixadinha
+        {
+            get { return tempoParado >= EsperaEmbaixadinha && Bola != null && Bola.NoPe && noChao && Vivo && !comemorando && !controle.Segurando; }
+        }
+        /// <summary>Tempo desde o começo da embaixadinha (a bola usa para acompanhar o pé).</summary>
+        public float TempoEmbaixadinha
+        {
+            get { return Mathf.Max(0f, tempoParado - EsperaEmbaixadinha); }
+        }
+        /// <summary>Onde a bola fica quando está dominada.</summary>
+        public Vector2 PosicaoPe
+        {
+            get { return (Vector2)transform.position + new Vector2(Direcao * 0.5f, 0.26f); }
+        }
 
         public static Jogador Criar(Vector3 posicao)
         {
-            var go = new GameObject("Curupira (Jogador)");
+            var go = new GameObject("Craque (Jogador)");
             go.layer = Camadas.Jogador;
             go.transform.position = posicao;
-            return go.AddComponent<Jogador>();
+            Jogador j = go.AddComponent<Jogador>();
+            j.Bola = Bola.Criar(j);
+            return j;
         }
 
         void Awake()
@@ -104,13 +147,15 @@ namespace Curupira
             Materiais2D.Aplicar(sr, false);
             anim = visual.gameObject.AddComponent<AnimadorSprite>();
             anim.alvo = sr;
-            anim.Tocar("curupira_parado", 6f);
+            anim.Tocar("craque_parado", 6f);
         }
 
         void OnDestroy()
         {
             if (Atual == this)
                 Atual = null;
+            if (Bola != null)
+                Destroy(Bola.gameObject);
         }
 
         void Update()
@@ -129,14 +174,16 @@ namespace Curupira
                 else
                     timerBuffer = TempoBuffer;
             }
-            if (controlavel && Entrada.AssobioApertado)
-                Assobiar();
+
+            if (controlavel)
+                LerChute(dt);
+            else
+                controle.Cancelar();
 
             timerBuffer -= dt;
             timerInvulneravel -= dt;
             timerSemControle -= dt;
-            timerAssobioAnim -= dt;
-            RecargaRestante = Mathf.Max(0f, RecargaRestante - dt);
+            timerAnimChute -= dt;
 
             if (timerDescer > 0f)
             {
@@ -148,22 +195,94 @@ namespace Curupira
                 }
             }
 
+            // conta quanto tempo está parado (para começar a embaixadinha)
+            bool parado = noChao && Mathf.Abs(entradaH) < 0.1f &&
+                          Mathf.Abs(rb.linearVelocity.x - VelocidadePlataforma()) < 0.3f && timerAnimChute <= 0f;
+            tempoParado = parado ? tempoParado + dt : 0f;
+
             // pisca enquanto está invulnerável
             sr.enabled = !(timerInvulneravel > 0f && Vivo && Mathf.Repeat(Time.time * 14f, 1f) < 0.35f);
 
-            // volta a escala do "squash & stretch"
-            visual.localScale = Vector3.Lerp(visual.localScale, Vector3.one, 1f - Mathf.Exp(-14f * dt));
+            // volta a escala do "squash & stretch" (tremendo enquanto carrega a folha seca)
+            Vector3 alvoEscala = Vector3.one;
+            if (controle.CargaCheia)
+                alvoEscala = new Vector3(1f + Mathf.Sin(Time.time * 60f) * 0.04f, 1f, 1f);
+            visual.localScale = Vector3.Lerp(visual.localScale, alvoEscala, 1f - Mathf.Exp(-14f * dt));
 
             if (entradaH > 0.01f) olhandoDireita = true;
             else if (entradaH < -0.01f) olhandoDireita = false;
             sr.flipX = !olhandoDireita;
 
             Animar();
-            Pegadas(dt);
 
             GerenciadorFase g = GerenciadorFase.Instancia;
             if (Vivo && g != null && transform.position.y < g.LimiteQueda)
                 g.JogadorCaiuNoAbismo();
+        }
+
+        /// <summary>J: toque = rasteiro (ou cavadinha com ↑), segurar = folha seca. K = cavadinha.</summary>
+        void LerChute(float dt)
+        {
+            if (Bola == null)
+                return;
+            if (Entrada.CavadinhaApertada)
+            {
+                if (Bola.NoPe)
+                {
+                    controle.Cancelar();
+                    Chutar(TipoChute.Cavadinha);
+                }
+                else
+                {
+                    Bola.Chamar();
+                }
+            }
+            if (Entrada.ChuteApertado)
+            {
+                if (Bola.NoPe)
+                    controle.Apertar();
+                else
+                    Bola.Chamar();       // apertar J com a bola longe faz ela voltar
+            }
+            if (!controle.Segurando)
+            {
+                avisouCargaCheia = false;
+                return;
+            }
+            if (!Bola.NoPe)
+            {
+                controle.Cancelar();
+                return;
+            }
+            controle.Atualizar(dt);
+            if (controle.CargaCheia && !avisouCargaCheia)
+            {
+                avisouCargaCheia = true;
+                SomJogo.Tocar(Som.CargaCheia, 0.8f);
+                Efeitos.Particulas("brilho", (Vector3)PosicaoPe, 6, new Color(1f, 0.85f, 0.3f), 1.5f, 3f, 0.5f, 0f, true);
+            }
+            if (!Entrada.ChuteSegurado)
+                Chutar(controle.Soltar(Entrada.CimaSegurado));
+        }
+
+        /// <summary>Chuta a bola (se ela estiver no pé). Público para os testes.</summary>
+        public bool Chutar(TipoChute tipo)
+        {
+            if (Bola == null || !Bola.NoPe || !Vivo)
+                return false;
+            if (!Bola.Chutar(tipo, Direcao, rb.linearVelocity.x))
+                return false;
+            timerAnimChute = TempoAnimChute;
+            tempoParado = 0f;
+            anim.Tocar("craque_chute", 3f / TempoAnimChute, false, true);
+            if (tipo == TipoChute.FolhaSeca)
+            {
+                visual.localScale = new Vector3(1.25f, 0.85f, 1f);
+                CameraSeguir.Tremer(0.15f, 0.2f);
+                AnelExpansivo.Criar((Vector3)PosicaoPe, 1.6f, new Color(1f, 0.85f, 0.3f, 0.9f));
+            }
+            Efeitos.Animacao("poeira", transform.position + new Vector3(Direcao * 0.3f, 0.2f, 0f), 18f, 0.7f);
+            return true;
         }
 
         void FixedUpdate()
@@ -194,9 +313,10 @@ namespace Curupira
             }
 
             Vector2 v = rb.linearVelocity;
-            float alvo = entradaH * Velocidade;
-            if (plataformaMovel != null)
-                alvo += plataformaMovel.Velocidade.x;
+            float alvo = entradaH * Velocidade + VelocidadePlataforma();
+            // carregando a folha seca o craque anda devagar
+            if (controle.Carregando)
+                alvo = entradaH * Velocidade * 0.35f + VelocidadePlataforma();
             float acel = noChao ? AceleracaoChao : AceleracaoAr;
             if (timerSemControle <= 0f)
                 v.x = Mathf.MoveTowards(v.x, alvo, acel * Time.fixedDeltaTime);
@@ -226,6 +346,11 @@ namespace Curupira
             rb.linearVelocity = v;
         }
 
+        float VelocidadePlataforma()
+        {
+            return plataformaMovel != null ? plataformaMovel.Velocidade.x : 0f;
+        }
+
         bool TentarDescerPlataforma()
         {
             if (!noChao)
@@ -244,77 +369,41 @@ namespace Curupira
         {
             if (!Vivo || timerSemControle > 0f)
             {
-                anim.Tocar("curupira_dano", 1f);
+                anim.Tocar("craque_dano", 1f);
                 return;
             }
             if (comemorando)
             {
-                anim.Tocar("curupira_vitoria", 5f);
+                anim.Tocar("craque_vitoria", 5f);
                 return;
             }
-            if (timerAssobioAnim > 0f)
+            if (timerAnimChute > 0f)
+                return; // a animação do chute toca até o fim
+            if (controle.Carregando)
             {
-                anim.Tocar("curupira_assobio", 8f);
+                anim.Tocar("craque_carregar", controle.CargaCheia ? 16f : 8f);
                 return;
             }
             if (!noChao)
             {
-                anim.Tocar(rb.linearVelocity.y > 0f ? "curupira_pulo" : "curupira_queda", 8f);
+                anim.Tocar(rb.linearVelocity.y > 0f ? "craque_pulo" : "craque_queda", 8f);
                 return;
             }
-            if (Mathf.Abs(rb.linearVelocity.x - (plataformaMovel != null ? plataformaMovel.Velocidade.x : 0f)) > 0.6f)
-                anim.Tocar("curupira_correr", 12f);
-            else
-                anim.Tocar("curupira_parado", 5f);
-        }
-
-        /// <summary>O Curupira deixa pegadas viradas para trás (para enganar os caçadores!).</summary>
-        void Pegadas(float dt)
-        {
-            if (!noChao || Mathf.Abs(entradaH) < 0.1f)
-                return;
-            timerPegada -= dt;
-            if (timerPegada > 0f)
-                return;
-            timerPegada = 0.2f;
-            Sprite s = Arte.Sprite("pegada");
-            if (s == null)
-                return;
-            SpriteRenderer p = Efeitos.NovoSprite("pegada", null, s, Ordem.Pegadas);
-            p.transform.position = transform.position + new Vector3(0f, 0.06f, 0f);
-            // a pegada aponta para o lado contrário ao que ele corre
-            p.flipX = !olhandoDireita;
-            var part = p.gameObject.AddComponent<Particula>();
-            part.vida = 1.6f;
-        }
-
-        void Assobiar()
-        {
-            if (RecargaRestante > 0f)
-                return;
-            RecargaRestante = RecargaAssobio;
-            timerAssobioAnim = 0.45f;
-            SomJogo.Tocar(Som.Assobio);
-            Vector3 centro = transform.position + new Vector3(0f, 0.9f, 0f);
-            AnelAssobio.Criar(centro, RaioAssobio);
-            Efeitos.Particulas("nota", centro, 6, Color.white, 1.5f, 3f, 0.9f, -1f, true, 30f, 150f);
-            int atingidos = 0;
-            for (int i = Inimigo.Todos.Count - 1; i >= 0; i--)
+            if (Mathf.Abs(rb.linearVelocity.x - VelocidadePlataforma()) > 0.6f)
             {
-                Inimigo ini = Inimigo.Todos[i];
-                if (ini == null || ini.EstaMorto)
-                    continue;
-                if (Vector2.Distance(ini.Centro, centro) <= RaioAssobio)
-                {
-                    ini.Atordoar(TempoTonto);
-                    atingidos++;
-                }
+                anim.Tocar("craque_correr", 12f);
+                return;
             }
-            if (atingidos > 0 && GerenciadorFase.Instancia != null)
-                GerenciadorFase.Instancia.Mensagem(atingidos > 1 ? "MÁQUINAS TONTAS!" : "MÁQUINA TONTA!", FabricaUI.CorVerde, 1f);
+            if (FazendoEmbaixadinha)
+            {
+                // 4 quadros por ciclo: o pé sobe no quadro 0, quando a bola volta
+                anim.Tocar("craque_embaixadinha", 4f / CicloEmbaixadinha, true, anim.Atual != "craque_embaixadinha");
+                return;
+            }
+            anim.Tocar("craque_parado", 5f);
         }
 
-        /// <summary>Quica depois de pisar num inimigo.</summary>
+        /// <summary>Quica depois de pisar num argentino.</summary>
         public void Quicar()
         {
             Vector2 v = rb.linearVelocity;
@@ -332,6 +421,7 @@ namespace Curupira
             SomJogo.Tocar(Som.Dano);
             timerInvulneravel = 1.6f;
             timerSemControle = 0.35f;
+            controle.Cancelar();
             float lado = transform.position.x < origem.x ? -1f : 1f;
             rb.linearVelocity = new Vector2(lado * 6f, 9f);
             CameraSeguir.Tremer(0.25f, 0.25f);
@@ -344,6 +434,7 @@ namespace Curupira
         public void Morrer()
         {
             Vivo = false;
+            controle.Cancelar();
             sr.enabled = true;
             col.enabled = false;
             rb.linearVelocity = new Vector2(0f, 12f);
@@ -352,7 +443,7 @@ namespace Curupira
             SomJogo.Tocar(Som.Queda);
         }
 
-        /// <summary>Volta para o último totem (depois de cair no abismo/rio).</summary>
+        /// <summary>Volta para a última bandeirinha (depois de cair no buraco ou no mar).</summary>
         public void Renascer(Vector3 posicao)
         {
             transform.position = posicao;
@@ -360,6 +451,9 @@ namespace Curupira
             rb.linearVelocity = Vector2.zero;
             timerInvulneravel = 1.6f;
             timerSemControle = 0f;
+            controle.Cancelar();
+            if (Bola != null)
+                Bola.VoltarParaOPe();
             Efeitos.Animacao("brilho", posicao + Vector3.up * 0.8f, 10f, 2f, true);
             CameraSeguir.Teleportar();
         }
@@ -368,6 +462,7 @@ namespace Curupira
         {
             comemorando = true;
             timerInvulneravel = 0f;
+            controle.Cancelar();
         }
 
         void OnCollisionStay2D(Collision2D c)

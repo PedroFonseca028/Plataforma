@@ -1,17 +1,17 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>
     /// Fonte "pixel art" desenhada à mão (5x7 pixels, só maiúsculas) com os
-    /// acentos do português. O atlas é montado em tempo de execução, então o
-    /// jogo não depende de nenhum arquivo de fonte.
+    /// acentos do português. O desenho das letras fica em <see cref="GlifosFonte"/>;
+    /// aqui o atlas é montado em tempo de execução, então o jogo não depende de
+    /// nenhum arquivo de fonte.
     /// </summary>
     public static class FontePixel
     {
-        public const int AlturaGlifo = 10;   // 2 linhas de acento + 7 da letra + 1 abaixo
-        public const int LinhaBase = 2;      // onde a letra começa (abaixo dos acentos)
+        public const int AlturaGlifo = GlifosFonte.AlturaGlifo;
         const int CelulaL = 7;
         const int CelulaA = 12;
         const int TamanhoAtlas = 128;
@@ -33,96 +33,6 @@ namespace Curupira
             atlas = null;
             glifos = null;
             spritesGlifo = null;
-        }
-
-        // ------------------------------------------------------------ desenho das letras (7 linhas cada)
-        static readonly Dictionary<char, string[]> Base = new Dictionary<char, string[]>
-        {
-            { 'A', new[] { ".###.", "#...#", "#...#", "#####", "#...#", "#...#", "#...#" } },
-            { 'B', new[] { "####.", "#...#", "#...#", "####.", "#...#", "#...#", "####." } },
-            { 'C', new[] { ".###.", "#...#", "#....", "#....", "#....", "#...#", ".###." } },
-            { 'D', new[] { "####.", "#...#", "#...#", "#...#", "#...#", "#...#", "####." } },
-            { 'E', new[] { "#####", "#....", "#....", "####.", "#....", "#....", "#####" } },
-            { 'F', new[] { "#####", "#....", "#....", "####.", "#....", "#....", "#...." } },
-            { 'G', new[] { ".###.", "#...#", "#....", "#.###", "#...#", "#...#", ".####" } },
-            { 'H', new[] { "#...#", "#...#", "#...#", "#####", "#...#", "#...#", "#...#" } },
-            { 'I', new[] { "###", ".#.", ".#.", ".#.", ".#.", ".#.", "###" } },
-            { 'J', new[] { "..###", "...#.", "...#.", "...#.", "#..#.", "#..#.", ".##.." } },
-            { 'K', new[] { "#...#", "#..#.", "#.#..", "##...", "#.#..", "#..#.", "#...#" } },
-            { 'L', new[] { "#....", "#....", "#....", "#....", "#....", "#....", "#####" } },
-            { 'M', new[] { "#...#", "##.##", "#.#.#", "#.#.#", "#...#", "#...#", "#...#" } },
-            { 'N', new[] { "#...#", "##..#", "#.#.#", "#..##", "#...#", "#...#", "#...#" } },
-            { 'O', new[] { ".###.", "#...#", "#...#", "#...#", "#...#", "#...#", ".###." } },
-            { 'P', new[] { "####.", "#...#", "#...#", "####.", "#....", "#....", "#...." } },
-            { 'Q', new[] { ".###.", "#...#", "#...#", "#...#", "#.#.#", "#..#.", ".##.#" } },
-            { 'R', new[] { "####.", "#...#", "#...#", "####.", "#.#..", "#..#.", "#...#" } },
-            { 'S', new[] { ".####", "#....", "#....", ".###.", "....#", "....#", "####." } },
-            { 'T', new[] { "#####", "..#..", "..#..", "..#..", "..#..", "..#..", "..#.." } },
-            { 'U', new[] { "#...#", "#...#", "#...#", "#...#", "#...#", "#...#", ".###." } },
-            { 'V', new[] { "#...#", "#...#", "#...#", "#...#", "#...#", ".#.#.", "..#.." } },
-            { 'W', new[] { "#...#", "#...#", "#...#", "#.#.#", "#.#.#", "#.#.#", ".#.#." } },
-            { 'X', new[] { "#...#", "#...#", ".#.#.", "..#..", ".#.#.", "#...#", "#...#" } },
-            { 'Y', new[] { "#...#", "#...#", ".#.#.", "..#..", "..#..", "..#..", "..#.." } },
-            { 'Z', new[] { "#####", "....#", "...#.", "..#..", ".#...", "#....", "#####" } },
-            { '0', new[] { ".###.", "#...#", "#..##", "#.#.#", "##..#", "#...#", ".###." } },
-            { '1', new[] { ".#.", "##.", ".#.", ".#.", ".#.", ".#.", "###" } },
-            { '2', new[] { ".###.", "#...#", "....#", "...#.", "..#..", ".#...", "#####" } },
-            { '3', new[] { "####.", "....#", "....#", ".###.", "....#", "....#", "####." } },
-            { '4', new[] { "...#.", "..##.", ".#.#.", "#..#.", "#####", "...#.", "...#." } },
-            { '5', new[] { "#####", "#....", "####.", "....#", "....#", "#...#", ".###." } },
-            { '6', new[] { ".###.", "#....", "#....", "####.", "#...#", "#...#", ".###." } },
-            { '7', new[] { "#####", "....#", "...#.", "..#..", ".#...", ".#...", ".#..." } },
-            { '8', new[] { ".###.", "#...#", "#...#", ".###.", "#...#", "#...#", ".###." } },
-            { '9', new[] { ".###.", "#...#", "#...#", ".####", "....#", "....#", ".###." } },
-            { '.', new[] { ".", ".", ".", ".", ".", ".", "#" } },
-            { ',', new[] { ".", ".", ".", ".", ".", "#", "#" } },
-            { ':', new[] { ".", ".", "#", ".", ".", "#", "." } },
-            { ';', new[] { ".", ".", "#", ".", ".", "#", "#" } },
-            { '!', new[] { "#", "#", "#", "#", "#", ".", "#" } },
-            { '?', new[] { ".###.", "#...#", "....#", "...#.", "..#..", ".....", "..#.." } },
-            { '-', new[] { "....", "....", "....", "####", "....", "....", "...." } },
-            { '+', new[] { ".....", "..#..", "..#..", "#####", "..#..", "..#..", "....." } },
-            { '/', new[] { "....#", "....#", "...#.", "..#..", ".#...", "#....", "#...." } },
-            { '(', new[] { ".#", "#.", "#.", "#.", "#.", "#.", ".#" } },
-            { ')', new[] { "#.", ".#", ".#", ".#", ".#", ".#", "#." } },
-            { '[', new[] { "##", "#.", "#.", "#.", "#.", "#.", "##" } },
-            { ']', new[] { "##", ".#", ".#", ".#", ".#", ".#", "##" } },
-            { '\'', new[] { "#", "#", ".", ".", ".", ".", "." } },
-            { '"', new[] { "#.#", "#.#", "...", "...", "...", "...", "..." } },
-            { '%', new[] { "##..#", "##..#", "...#.", "..#..", ".#...", "#..##", "#..##" } },
-            { '*', new[] { ".....", "#.#.#", ".###.", "#####", ".###.", "#.#.#", "....." } },
-            { '=', new[] { ".....", ".....", "#####", ".....", "#####", ".....", "....." } },
-            { '<', new[] { "...#", "..#.", ".#..", "#...", ".#..", "..#.", "...#" } },
-            { '>', new[] { "#...", ".#..", "..#.", "...#", "..#.", ".#..", "#..." } },
-            { '_', new[] { ".....", ".....", ".....", ".....", ".....", ".....", "#####" } },
-            { '#', new[] { ".#.#.", ".#.#.", "#####", ".#.#.", "#####", ".#.#.", ".#.#." } },
-            { '←', new[] { ".....", "..#..", ".#...", "#####", ".#...", "..#..", "....." } }, // ←
-            { '→', new[] { ".....", "..#..", "...#.", "#####", "...#.", "..#..", "....." } }, // →
-            { '↑', new[] { "..#..", ".###.", "#.#.#", "..#..", "..#..", "..#..", "..#.." } }, // ↑
-            { '↓', new[] { "..#..", "..#..", "..#..", "..#..", "#.#.#", ".###.", "..#.." } }, // ↓
-            { '♥', new[] { ".....", ".#.#.", "#####", "#####", ".###.", "..#..", "....." } }, // ♥
-        };
-
-        // acentos: letra base + 2 linhas desenhadas acima
-        static readonly Dictionary<char, KeyValuePair<char, string[]>> Acentuadas = new Dictionary<char, KeyValuePair<char, string[]>>
-        {
-            { 'Á', Acento('A', "...#.", "..#..") },
-            { 'À', Acento('A', ".#...", "..#..") },
-            { 'Â', Acento('A', "..#..", ".#.#.") },
-            { 'Ã', Acento('A', ".##.#", "#..#.") },
-            { 'É', Acento('E', "...#.", "..#..") },
-            { 'Ê', Acento('E', "..#..", ".#.#.") },
-            { 'Í', Acento('I', "..#", ".#.") },
-            { 'Ó', Acento('O', "...#.", "..#..") },
-            { 'Ô', Acento('O', "..#..", ".#.#.") },
-            { 'Õ', Acento('O', ".##.#", "#..#.") },
-            { 'Ú', Acento('U', "...#.", "..#..") },
-            { 'Ü', Acento('U', ".....", ".#.#.") },
-        };
-
-        static KeyValuePair<char, string[]> Acento(char letra, string linha0, string linha1)
-        {
-            return new KeyValuePair<char, string[]>(letra, new[] { linha0, linha1 });
         }
 
         public static Texture2D Atlas
@@ -149,17 +59,8 @@ namespace Curupira
 
             glifos = new Dictionary<char, Glifo>();
             int indice = 0;
-
-            // lista de todos os caracteres: base + acentuados + Ç
-            var todos = new List<KeyValuePair<char, string[]>>();
-            foreach (KeyValuePair<char, string[]> par in Base)
-                todos.Add(new KeyValuePair<char, string[]>(par.Key, Completo(par.Value, null, null)));
-            foreach (KeyValuePair<char, KeyValuePair<char, string[]>> par in Acentuadas)
-                todos.Add(new KeyValuePair<char, string[]>(par.Key, Completo(Base[par.Value.Key], par.Value.Value, null)));
-            todos.Add(new KeyValuePair<char, string[]>('Ç', Completo(Base['C'], null, "..#..")));
-
             int colunas = TamanhoAtlas / CelulaL;
-            foreach (KeyValuePair<char, string[]> par in todos)
+            foreach (KeyValuePair<char, string[]> par in GlifosFonte.Todos())
             {
                 string[] linhas = par.Value;
                 int largura = 0;
@@ -175,9 +76,7 @@ namespace Curupira
                     {
                         if (l[c] != '#')
                             continue;
-                        int px = cx + c;
-                        int py = cyTopo - r;
-                        cores[py * TamanhoAtlas + px] = new Color32(255, 255, 255, 255);
+                        cores[(cyTopo - r) * TamanhoAtlas + cx + c] = new Color32(255, 255, 255, 255);
                     }
                 }
 
@@ -194,53 +93,10 @@ namespace Curupira
             atlas.Apply(false, false);
         }
 
-        /// <summary>Monta as 10 linhas do glifo: 2 de acento, 7 da letra e 1 abaixo.</summary>
-        static string[] Completo(string[] letra, string[] acento, string abaixo)
-        {
-            int largura = 0;
-            foreach (string l in letra)
-                largura = Mathf.Max(largura, l.Length);
-            string vazio = new string('.', largura);
-            var r = new string[AlturaGlifo];
-            r[0] = acento != null ? Ajustar(acento[0], largura) : vazio;
-            r[1] = acento != null ? Ajustar(acento[1], largura) : vazio;
-            for (int i = 0; i < 7; i++)
-                r[LinhaBase + i] = Ajustar(letra[i], largura);
-            r[9] = abaixo != null ? Ajustar(abaixo, largura) : vazio;
-            return r;
-        }
-
-        static string Ajustar(string s, int largura)
-        {
-            if (s.Length == largura)
-                return s;
-            if (s.Length > largura)
-                return s.Substring(0, largura);
-            return s + new string('.', largura - s.Length);
-        }
-
         /// <summary>Converte o caractere para um que exista na fonte.</summary>
         public static char Normalizar(char c)
         {
-            char m = char.ToUpperInvariant(c);
-            Montar();
-            if (glifos.ContainsKey(m) || m == ' ' || m == '\n')
-                return m;
-            switch (m)
-            {
-                case 'È': return 'É';
-                case 'Ì': return 'Í';
-                case 'Ò': return 'Ó';
-                case 'Ù': return 'Ú';
-                case 'Ä': return 'A';
-                case 'Ë': return 'E';
-                case 'Ï': return 'I';
-                case 'Ö': return 'O';
-                case 'Ñ': return 'N';
-                case 'Î': return 'I';
-                case 'Û': return 'U';
-            }
-            return '?';
+            return GlifosFonte.Normalizar(c);
         }
 
         public static bool TentarGlifo(char c, out Glifo g)
@@ -268,7 +124,7 @@ namespace Curupira
             return total;
         }
 
-        /// <summary>Sprite de um caractere (usado nos textos que flutuam no cenário).</summary>
+        /// <summary>Sprite de um caractere (usado nos textos que aparecem no cenário).</summary>
         public static Sprite SpriteDoGlifo(char c)
         {
             Montar();

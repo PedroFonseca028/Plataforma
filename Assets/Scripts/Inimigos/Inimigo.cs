@@ -2,12 +2,12 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Curupira
+namespace RumoAoHexa
 {
     /// <summary>
-    /// Base de todos os inimigos. Cuida do contato com o jogador (pisão ou dano),
-    /// do estado "tonto" causado pelo assobio e da morte.
-    /// Os inimigos são corpos Kinematic com colisor Trigger.
+    /// Base dos argentinos. Encostar neles machuca; pular na cabeça deixa tonto
+    /// (e o craque quica); só a bola expulsa: cartão vermelho e eles somem.
+    /// São corpos Kinematic com colisor Trigger.
     /// </summary>
     public abstract class Inimigo : MonoBehaviour
     {
@@ -19,6 +19,8 @@ namespace Curupira
             Todos.Clear();
         }
 
+        public const float TempoTonto = 2.5f;
+
         protected SpriteRenderer sr;
         protected AnimadorSprite anim;
         protected Rigidbody2D rb;
@@ -26,12 +28,12 @@ namespace Curupira
         protected Transform visual;
         protected int direcao = -1;
         protected float tempoTonto;
-        protected bool morto;
+        protected bool expulso;
         Transform estrelas;
 
-        public bool EstaMorto
+        public bool EstaExpulso
         {
-            get { return morto; }
+            get { return expulso; }
         }
         public bool EstaTonto
         {
@@ -41,34 +43,31 @@ namespace Curupira
         {
             get { return col != null ? (Vector2)col.bounds.center : (Vector2)transform.position; }
         }
+        public float Altura
+        {
+            get { return TamanhoColisor.y; }
+        }
 
-        /// <summary>Prefixo dos sprites (serra, drone, fagulha).</summary>
+        /// <summary>Prefixo dos sprites (zagueiro, lateral, cabeceador).</summary>
         protected abstract string Prefixo { get; }
-        protected abstract string AnimNormal { get; }
+        protected virtual string AnimNormal
+        {
+            get { return Prefixo + "_andar"; }
+        }
         protected virtual float QpsNormal
         {
-            get { return 10f; }
+            get { return 8f; }
         }
-        /// <summary>A Fagulha só pode ser pisada quando está tonta.</summary>
-        protected virtual bool PodeSerPisado
+        protected virtual Vector2 TamanhoColisor
         {
-            get { return true; }
+            get { return new Vector2(0.72f, 1.45f); }
         }
-        protected virtual int PontosPisao
-        {
-            get { return 100; }
-        }
-        protected virtual bool Brilha
-        {
-            get { return false; }
-        }
-        protected abstract Vector2 TamanhoColisor { get; }
 
         protected abstract void Mover(float dt);
 
         public static T Criar<T>(Vector3 posicao) where T : Inimigo
         {
-            var go = new GameObject(typeof(T).Name);
+            var go = new GameObject(typeof(T).Name + " (Argentina)");
             go.layer = Camadas.Inimigo;
             go.transform.position = posicao;
             return go.AddComponent<T>();
@@ -89,7 +88,7 @@ namespace Curupira
             visual.SetParent(transform, false);
             sr = visual.gameObject.AddComponent<SpriteRenderer>();
             sr.sortingOrder = Ordem.Inimigos;
-            Materiais2D.Aplicar(sr, Brilha);
+            Materiais2D.Aplicar(sr, false);
             anim = visual.gameObject.AddComponent<AnimadorSprite>();
             anim.alvo = sr;
             anim.Tocar(AnimNormal, QpsNormal);
@@ -108,7 +107,7 @@ namespace Curupira
 
         void FixedUpdate()
         {
-            if (morto)
+            if (expulso)
                 return;
             float dt = Time.fixedDeltaTime;
             if (tempoTonto > 0f)
@@ -119,6 +118,7 @@ namespace Curupira
                 return;
             }
             Mover(dt);
+            // os sprites olham para a direita; direcao -1 = espelhado
             sr.flipX = direcao < 0;
         }
 
@@ -132,28 +132,35 @@ namespace Curupira
             }
         }
 
+        /// <summary>Pisão do craque: fica tonto (parado e inofensivo) por um tempo.</summary>
         public void Atordoar(float duracao)
         {
-            if (morto)
+            if (expulso)
                 return;
             tempoTonto = Mathf.Max(tempoTonto, duracao);
             anim.Tocar(Prefixo + "_tonto", 4f);
-            sr.color = new Color(0.75f, 0.85f, 1f);
+            sr.color = new Color(0.85f, 0.9f, 1f);
+            AoFicarTonto();
             if (estrelas == null)
             {
-                estrelas = new GameObject("Estrelas").transform;
+                estrelas = new GameObject("Estrelinhas").transform;
                 estrelas.SetParent(transform, false);
-                estrelas.localPosition = new Vector3(0f, TamanhoColisor.y + 0.35f, 0f);
+                estrelas.localPosition = new Vector3(0f, TamanhoColisor.y + 0.4f, 0f);
                 for (int i = 0; i < 3; i++)
                 {
-                    SpriteRenderer e = Efeitos.NovoSprite("estrela", estrelas, Arte.Sprite("estrela_" + (i % 2)), Ordem.Efeitos, true);
+                    SpriteRenderer e = Efeitos.NovoSprite("estrelinha", estrelas, Arte.Sprite("tontura_" + (i % 2)), Ordem.Efeitos, true);
                     float a = i * Mathf.PI * 2f / 3f;
                     e.transform.localPosition = new Vector3(Mathf.Cos(a) * 0.45f, Mathf.Sin(a) * 0.18f, 0f);
                 }
             }
         }
 
-        void SairDoTonto()
+        /// <summary>Para as subclasses que precisam parar o que estavam fazendo (pulo, arrancada).</summary>
+        protected virtual void AoFicarTonto()
+        {
+        }
+
+        protected virtual void SairDoTonto()
         {
             tempoTonto = 0f;
             anim.Tocar(AnimNormal, QpsNormal);
@@ -167,17 +174,24 @@ namespace Curupira
 
         void OnTriggerStay2D(Collider2D outro)
         {
-            if (morto)
+            if (expulso)
                 return;
             Jogador j = outro.GetComponent<Jogador>();
             if (j == null || !j.Vivo)
                 return;
 
-            bool vindoDeCima = j.transform.position.y > Centro.y && j.VelocidadeY < 2f;
-            if (vindoDeCima && (PodeSerPisado || EstaTonto))
+            bool vindoDeCima = j.transform.position.y > Centro.y + 0.15f && j.VelocidadeY < 2f;
+            if (vindoDeCima)
             {
                 j.Quicar();
-                Esmagar();
+                if (!EstaTonto)
+                {
+                    Atordoar(TempoTonto);
+                    SomJogo.Tocar(Som.Pisao);
+                    Efeitos.Animacao("poeira", (Vector3)Centro + Vector3.up * (Altura * 0.5f), 16f);
+                    if (GerenciadorFase.Instancia != null)
+                        GerenciadorFase.Instancia.ArgentinoAtordoado(this);
+                }
                 return;
             }
             if (EstaTonto)
@@ -185,38 +199,46 @@ namespace Curupira
             j.TomarDano(Centro);
         }
 
-        public void Esmagar()
+        /// <summary>A bola acertou: cartão vermelho e o argentino some.</summary>
+        public void Expulsar(Vector2 empurrao)
         {
-            if (morto)
+            if (expulso)
                 return;
-            morto = true;
+            expulso = true;
             col.enabled = false;
+            tempoTonto = 0f;
             if (estrelas != null)
+            {
                 Destroy(estrelas.gameObject);
+                estrelas = null;
+            }
             sr.color = Color.white;
-            anim.Tocar(Prefixo + "_esmagado", 1f);
-            SomJogo.Tocar(Som.Pisao);
+            anim.Tocar(Prefixo + "_expulso", 1f);
+            SomJogo.Tocar(Som.Expulso);
             CameraSeguir.Tremer(0.12f, 0.15f);
-            Efeitos.Animacao("fumaca", Centro, 12f, 1.3f);
-            Efeitos.Particulas("brilho", Centro, 5, Color.white, 2f, 4f, 0.4f, 3f, true);
-            Sessao.SomarPontos(PontosPisao);
-            Efeitos.TextoSubindo("+" + PontosPisao, (Vector3)Centro + Vector3.up * 0.8f, FabricaUI.CorDestaque);
-            StartCoroutine(Sumir());
+            CartaoVermelho.Mostrar((Vector3)Centro + new Vector3(0f, Altura * 0.5f + 0.5f, 0f));
+            AnelExpansivo.Criar(Centro, 1.3f, new Color(1f, 0.35f, 0.3f, 0.8f), 0.3f);
+            Efeitos.Particulas("brilho", Centro, 6, Color.white, 2f, 4.5f, 0.45f, 3f, true);
+            StartCoroutine(Sumir(empurrao));
         }
 
-        protected virtual IEnumerator Sumir()
+        IEnumerator Sumir(Vector2 empurrao)
         {
+            // empurrado pela bolada, fica um instante e some numa nuvem
             float t = 0f;
-            Vector3 escala = visual.localScale;
-            while (t < 0.6f)
+            Vector3 inicio = transform.position;
+            while (t < 0.45f)
             {
                 t += Time.deltaTime;
-                visual.localScale = new Vector3(escala.x * (1f + t * 0.4f), escala.y * Mathf.Max(0.3f, 1f - t), 1f);
+                float k = 1f - (1f - t / 0.45f) * (1f - t / 0.45f);
+                transform.position = inicio + new Vector3(empurrao.x * 0.6f * k, 0.25f * Mathf.Sin(k * Mathf.PI), 0f);
+                visual.localRotation = Quaternion.Euler(0f, 0f, -empurrao.x * 12f * k);
                 Color c = sr.color;
-                c.a = 1f - t / 0.6f;
+                c.a = 1f - Mathf.Max(0f, t - 0.25f) / 0.2f;
                 sr.color = c;
                 yield return null;
             }
+            Efeitos.Animacao("fumaca", (Vector3)Centro + Vector3.up * 0.2f, 12f, 1.6f);
             Destroy(gameObject);
         }
 
@@ -229,6 +251,22 @@ namespace Curupira
         protected bool TemParedeEm(Vector2 ponto, Vector2 tamanho)
         {
             return Physics2D.OverlapBox(ponto, tamanho, 0f, Camadas.MascaraSolida) != null;
+        }
+
+        /// <summary>Anda na direção atual e vira na parede ou na beirada. Devolve true se virou.</summary>
+        protected bool Patrulhar(float velocidade, float dt)
+        {
+            Vector2 pos = rb.position;
+            Vector2 frente = pos + new Vector2(direcao * (TamanhoColisor.x * 0.5f + 0.1f), 0f);
+            bool parede = TemParedeEm(frente + new Vector2(0f, 0.6f), new Vector2(0.1f, 0.6f));
+            bool beirada = !TemChaoEm(frente + new Vector2(0f, 0.1f), 0.35f);
+            if (parede || beirada)
+            {
+                direcao = -direcao;
+                return true;
+            }
+            rb.MovePosition(pos + new Vector2(direcao * velocidade * dt, 0f));
+            return false;
         }
     }
 }

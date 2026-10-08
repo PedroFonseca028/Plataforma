@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Gerador da arte original do jogo "Curupira: Guardião da Mata".
+Gerador da arte original do jogo "Rumo ao Hexa".
 
 Gera, dentro de Assets/Resources/Sprites:
   * as folhas de sprites (PNG),
@@ -29,7 +29,7 @@ PPU = 16
 
 def guid_de(texto):
     """GUID determinístico (32 hex) para o .meta não mudar entre execuções."""
-    return hashlib.md5(("curupira:" + texto).encode("utf-8")).hexdigest()
+    return hashlib.md5(("rumoaohexa:" + texto).encode("utf-8")).hexdigest()
 
 
 def id_interno(nome_folha, nome_sprite):
@@ -284,6 +284,20 @@ def salvar_imagem_unica(nome, canvas, manifest, pivo=(0.5, 0.5)):
     print("  %-22s %4dx%-4d (fundo)" % (nome + ".png", canvas.w, canvas.h))
 
 
+def limpar_antigos(gerados):
+    """Apaga folhas PNG que não fazem mais parte do jogo (e os .meta delas)."""
+    for nome in os.listdir(SAIDA):
+        if not nome.endswith(".png"):
+            continue
+        if nome[:-4] in gerados:
+            continue
+        for arquivo in (nome, nome + ".meta"):
+            caminho = os.path.join(SAIDA, arquivo)
+            if os.path.exists(caminho):
+                os.remove(caminho)
+        print("  removido (antigo): %s" % nome)
+
+
 def main():
     os.makedirs(SAIDA, exist_ok=True)
     # metas das pastas Resources e Resources/Sprites
@@ -294,37 +308,37 @@ def main():
                 f.write(meta_pasta(guid_de(pasta)))
 
     manifest = {"ppu": PPU, "folhas": []}
-    pe = (0.5, 0.0)       # pivô nos pés (personagens)
+    pe = (0.5, 0.0)       # pivô nos pés (personagens e objetos apoiados no chão)
     centro = (0.5, 0.5)
     sem = (0, 0, 0, 0)
 
     print("Gerando folhas de sprites...")
-    salvar_folha("curupira", [(n, c, pe, sem) for n, c in ap.quadros_curupira()], manifest)
-    salvar_folha("inimigos", [(n, c, pe, sem) for n, c in ap.quadros_inimigos()], manifest)
+    salvar_folha("jogador", [(n, c, pe, sem) for n, c in ap.quadros_jogador()], manifest)
+    salvar_folha("argentinos", [(n, c, pe, sem) for n, c in ap.quadros_argentinos()], manifest)
 
     itens = [(n, c, centro, sem) for n, c in ai.quadros_itens()]
     itens += [(n, c, centro, sem) for n, c in ai.quadros_pequenos()]
-    itens += [('brasa_%d' % i, ai.brasa(i), centro, sem) for i in range(2)]
-    itens += [(n, c, (0.5, 0.0), sem) for n, c in ai.quadros_totem()]
+    itens += [(n, c, pe, sem) for n, c in ai.quadros_bandeirinha()]
+    itens += [('taca', ai.taca(), pe, sem), ('placar', ai.placar(), centro, sem)]
     itens += [('anel', ai.anel(), centro, sem), ('luz_suave', ai.luz_suave(), centro, sem)]
     salvar_folha("itens", itens, manifest)
 
-    for tema in ("mata", "queimada"):
+    for tema in ("praia", "estadio"):
         t = [(n, c, centro, sem) for n, c in ac.tiles_chao(tema)]
         t += [(n, c, centro, sem) for n, c in ac.tiles_plataforma(tema)]
         t += [(n, c, centro, sem) for n, c in ac.tiles_espinho(tema)]
         t += [(n, c, centro, sem) for n, c in ac.tiles_liquido(tema)]
-        deco = ac.deco_mata() if tema == "mata" else ac.deco_queimada()
+        if tema == "praia":
+            t.append(('praia_prancha', ac.prancha(), centro, sem))
+        deco = ac.deco_praia() if tema == "praia" else ac.deco_estadio()
         t += [(n, c, centro, sem) for n, c in deco]
         salvar_folha("tiles_" + tema, t, manifest)
 
-    salvar_folha("arvores", [(n, c, (0.5, 0.0), sem) for n, c in ac.quadros_arvores()], manifest)
+    salvar_folha("decoracao", [(n, c, pe, sem) for n, c in ac.quadros_decoracao()], manifest)
 
     ui = [
         ('ui_coracao_cheio', ai.ui_coracao(True), centro, sem),
         ('ui_coracao_vazio', ai.ui_coracao(False), centro, sem),
-        ('ui_semente', ai.ui_semente(), centro, sem),
-        ('ui_assobio', ai.ui_assobio(), centro, sem),
         ('ui_botao', ai.ui_botao(), centro, (6, 6, 6, 6)),
         ('ui_painel', ai.ui_painel(), centro, (12, 12, 12, 12)),
         ('ui_tecla', ai.ui_tecla(), centro, (5, 5, 5, 5)),
@@ -334,6 +348,8 @@ def main():
 
     for nome, canvas in ac.fundos():
         salvar_imagem_unica(nome, canvas, manifest)
+
+    limpar_antigos(set(f["folha"] for f in manifest["folhas"]))
 
     caminho = os.path.join(SAIDA, "manifest.json")
     with open(caminho, "w", encoding="utf-8", newline="\n") as f:
