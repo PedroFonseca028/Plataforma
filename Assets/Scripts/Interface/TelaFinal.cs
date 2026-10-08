@@ -1,11 +1,13 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace RumoAoHexa
 {
     /// <summary>
-    /// Cena "FimDeJogo": informa VITÓRIA ou DERROTA, mostra a pontuação e
-    /// tem os botões para jogar de novo (reiniciar) ou voltar ao menu.
+    /// Cena "FimDeJogo": informa VITÓRIA (pegou todos os itens) ou DERROTA
+    /// (os argentinos machucaram e as vidas chegaram a zero), mostra a pontuação
+    /// e tem o botão REINICIAR (começa o jogo de novo) e o de voltar ao menu.
     /// </summary>
     public class TelaFinal : MonoBehaviour
     {
@@ -13,19 +15,33 @@ namespace RumoAoHexa
         public Material materialAceso;
         public Material materialBrilho;
 
-        Button jogarDeNovo;
+        Button reiniciar;
+        Canvas tela;
         bool venceu;
         float tempoConfete;
 
-        public Button BotaoJogarNovamente
+        /// <summary>O botão que reinicia o jogo (volta para a Fase 1 com tudo zerado).</summary>
+        public Button BotaoReiniciar
         {
-            get { return jogarDeNovo; }
+            get { return reiniciar; }
+        }
+
+        /// <summary>O Canvas da tela final (com VITÓRIA ou DERROTA).</summary>
+        public Canvas Tela
+        {
+            get { return tela; }
         }
 
         void Start()
         {
-            Materiais2D.Definir(materialAceso, materialBrilho);
             Time.timeScale = 1f;
+            // aberta direto no editor, sem partida: o jogo começa pela tela inicial
+            if (Sessao.Resultado == ResultadoJogo.Nenhum && !Sessao.Iniciada && !Partida.PodePularTelaInicial())
+            {
+                SceneManager.LoadScene(Cenas.Menu);
+                return;
+            }
+            Materiais2D.Definir(materialAceso, materialBrilho);
             venceu = Sessao.Resultado == ResultadoJogo.Vitoria;
 
             Camera cam = Camera.main;
@@ -40,6 +56,7 @@ namespace RumoAoHexa
 
             FabricaUI.GarantirEventSystem();
             Canvas canvas = FabricaUI.CriarCanvas("Fim de jogo", 10);
+            tela = canvas;
             Transform t = canvas.transform;
             Vector2 c = new Vector2(0.5f, 0.5f);
 
@@ -65,8 +82,8 @@ namespace RumoAoHexa
                 cor = FabricaUI.CorTexto;
             }
 
-            FabricaUI.Texto(t, titulo, c, new Vector2(0f, 190f), 8f, cor, TextAnchor.MiddleCenter, new Vector2(900f, 110f)).contorno = true;
-            FabricaUI.Texto(t, frase, c, new Vector2(0f, 112f), 2f, FabricaUI.CorTexto, TextAnchor.MiddleCenter, new Vector2(900f, 60f)).contorno = true;
+            FabricaUI.Texto(t, titulo, c, new Vector2(0f, 196f), 8f, cor, TextAnchor.MiddleCenter, new Vector2(900f, 110f)).contorno = true;
+            FabricaUI.Texto(t, frase, c, new Vector2(0f, 118f), 2f, FabricaUI.CorTexto, TextAnchor.MiddleCenter, new Vector2(920f, 60f)).contorno = true;
 
             FabricaUI.Painel(t, c, new Vector2(0f, -8f), new Vector2(580f, 150f));
             FabricaUI.Texto(t, "PONTOS: " + Sessao.Pontos, c, new Vector2(0f, 38f), 3f, FabricaUI.CorTexto);
@@ -77,10 +94,11 @@ namespace RumoAoHexa
             string recorde = Sessao.NovoRecorde ? "NOVO RECORDE!" : "RECORDE: " + Sessao.Recorde;
             FabricaUI.Texto(t, recorde, c, new Vector2(0f, -48f), 2f, Sessao.NovoRecorde ? FabricaUI.CorVerde : new Color(1f, 1f, 1f, 0.8f));
 
-            jogarDeNovo = FabricaUI.Botao(t, "JOGAR NOVAMENTE", c, new Vector2(0f, -122f), new Vector2(300f, 48f), JogarNovamente);
-            Button menu = FabricaUI.Botao(t, "MENU PRINCIPAL", c, new Vector2(0f, -182f), new Vector2(300f, 48f), () => Transicao.Carregar(Cenas.Menu));
-            FabricaUI.NavegacaoVertical(jogarDeNovo, menu);
-            FabricaUI.Selecionar(jogarDeNovo);
+            reiniciar = FabricaUI.Botao(t, Textos.BotaoReiniciar, c, new Vector2(0f, -122f), new Vector2(300f, 48f), Reiniciar);
+            Button menu = FabricaUI.Botao(t, Textos.BotaoMenu, c, new Vector2(0f, -182f), new Vector2(300f, 48f), IrParaMenu);
+            FabricaUI.NavegacaoVertical(reiniciar, menu);
+            FabricaUI.Selecionar(reiniciar);
+            FabricaUI.Texto(t, Textos.DicaReiniciar, c, new Vector2(0f, -226f), 2f, new Color(1f, 1f, 1f, 0.75f)).contorno = true;
 
             SomJogo.Musica(venceu ? Trilha.Vitoria : Trilha.Derrota, false);
             Transicao.AoEntrarNaCena();
@@ -90,6 +108,8 @@ namespace RumoAoHexa
         {
             if (Entrada.MudoApertado)
                 SomJogo.AlternarMudo();
+            if (reiniciar != null && Entrada.ConfirmarApertado)
+                Reiniciar();
             if (!venceu)
                 return;
             // chuva de confete verde e amarelo
@@ -115,7 +135,7 @@ namespace RumoAoHexa
             {
                 // a taça erguida acima da cabeça
                 SpriteRenderer taca = Efeitos.NovoSprite("Taça", null, Arte.Sprite("taca"), Ordem.Jogador + 1, true);
-                taca.transform.position = new Vector3(-8.5f, y + 3.0f, 0f);
+                taca.transform.position = new Vector3(-8.5f, y + 3.55f, 0f);
                 taca.transform.localScale = Vector3.one * 2f;
                 SpriteRenderer brilho = Efeitos.NovoSprite("Brilho", null, Arte.Sprite("luz_suave"), Ordem.Jogador, true);
                 brilho.transform.position = taca.transform.position + new Vector3(0f, 0.9f, 0f);
@@ -136,10 +156,21 @@ namespace RumoAoHexa
                 an2.Tocar("cabeceador_pulo", 4f);
         }
 
-        void JogarNovamente()
+        /// <summary>Reinicia o jogo: pontos, vidas e itens zerados, de volta à Fase 1.</summary>
+        public void Reiniciar()
         {
+            if (Transicao.Carregando)
+                return;
             Sessao.NovoJogo();
             Transicao.Carregar(Cenas.Fase1);
+        }
+
+        void IrParaMenu()
+        {
+            if (Transicao.Carregando)
+                return;
+            Sessao.Encerrar();
+            Transicao.Carregar(Cenas.Menu);
         }
     }
 }

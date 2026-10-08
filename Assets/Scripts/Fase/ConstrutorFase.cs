@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 namespace RumoAoHexa
@@ -49,6 +50,15 @@ namespace RumoAoHexa
 
         void Awake()
         {
+            // o jogo sempre começa pela tela inicial (com as orientações de como jogar):
+            // dar Play direto numa fase leva primeiro para o Menu
+            if (!Sessao.Iniciada && !Partida.PodePularTelaInicial())
+            {
+                enabled = false;
+                SceneManager.LoadScene(Cenas.Menu);
+                return;
+            }
+
             Materiais2D.Definir(materialAceso, materialBrilho);
             Camadas.ConfigurarColisoes();
             Sessao.GarantirIniciada();
